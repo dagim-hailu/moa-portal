@@ -1,0 +1,17 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+
+
+@import "@tabler/icons-webfont/dist/tabler-icons.min.css";
+
+// Import Bootstrap functions first
+@import "bootstrap/scss/functions";
+
+// Override Bootstrap variables here
+@import "./variables";
+
+// Import Bootstrap
+@import "bootstrap/scss/bootstrap";
+
+// Custom styles
+@import "./custom";

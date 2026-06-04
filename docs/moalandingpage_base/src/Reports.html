@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>PMIS | Advanced Protection & Reporting Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f0f4f9;
+            font-family: 'Inter', sans-serif;
+            color: #1e2a3e;
+            line-height: 1.4;
+        }
+        .app-wrapper {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 24px 32px;
+        }
+        /* Top navigation */
+        .top-nav {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            margin: 20px 0 28px;
+            padding: 0 28px;
+            border-radius: 60px;
+            box-shadow: 0 10px 25px -8px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.02);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+        .logo-icon {
+            background: linear-gradient(135deg, #0f5c3a, #1f8a55);
+            width: 42px; height: 42px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.4rem; box-shadow: 0 8px 16px -8px rgba(31,110,67,0.4);
+        }
+        .logo-text { font-weight: 800; font-size: 1.3rem; background: linear-gradient(120deg, #0b355c, #1f6e43); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        .nav-links { display: flex; gap: 32px; align-items: center; flex-wrap: wrap; }
+        .nav-links a {
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #2c4258;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .nav-links a:hover { color: #1f6e43; transform: translateY(-1px); }
+        .nav-actions { display: flex; gap: 12px; align-items: center; }
+        .icon-btn {
+            background: #f0f4fa; border: none; width: 42px; height: 42px; border-radius: 40px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+            cursor: pointer; transition: 0.2s; color: #2c3e50; position: relative;
+        }
+        .icon-btn:hover { background: #e2eaf2; color: #1f6e43; transform: scale(1.02); }
+        .todo-btn, .logout-btn { width: auto; padding: 0 20px; gap: 10px; background: white; border: 1px solid #dee6ef; font-weight: 600; }
+        .badge-notify { position: absolute; top: 4px; right: 6px; background: #dc2626; width: 9px; height: 9px; border-radius: 10px; border: 2px solid white; }
+        /* filter bar */
+        .filter-bar {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+            margin-bottom: 28px; gap: 16px; background: #ffffffcc; backdrop-filter: blur(4px);
+            padding: 8px 18px; border-radius: 48px; border: 1px solid #eef2f8;
+        }
+        .year-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+        .year-btn {
+            background: transparent; border: none; padding: 6px 16px; font-weight: 600;
+            border-radius: 32px; cursor: pointer; color: #4b5565; transition: 0.2s;
+        }
+        .year-btn.active { background: #1f6e43; color: white; box-shadow: 0 4px 10px rgba(31,110,67,0.3); }
+        .dept-selector {
+            background: white; border: 1px solid #e2edf2; padding: 6px 16px; border-radius: 40px;
+            font-weight: 500; font-size: 0.85rem; cursor: pointer; outline: none;
+        }
+        .dashboard-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 26px; margin-bottom: 40px;
+        }
+        .card {
+            background: #ffffff; border-radius: 28px; padding: 1.5rem;
+            box-shadow: 0 12px 28px -10px rgba(0,0,0,0.05); border: 1px solid #eef2f9;
+            transition: all 0.25s ease;
+        }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 24px 36px -12px rgba(0,0,0,0.12); border-color: #cde0ed; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .card-header h3 { font-size: 1.1rem; font-weight: 700; }
+        .card-icon { width: 48px; height: 48px; background: #eef6fc; border-radius: 28px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #1f6e43; }
+        .card-value { font-size: 2rem; font-weight: 800; margin: 12px 0 6px; }
+        .progress-bar { background: #e9f0f5; border-radius: 20px; height: 8px; margin: 16px 0 12px; }
+        .progress-fill { background: #1f6e43; width: 0%; height: 100%; border-radius: 20px; transition: width 0.4s; }
+        .stat-row { display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.8rem; color: #5e6f8d; font-weight: 500; }
+        .charts-row {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 28px; margin-bottom: 40px;
+        }
+        .chart-card {
+            background: white; border-radius: 28px; padding: 1.2rem 1.2rem 1rem;
+            border: 1px solid #eef2f9; box-shadow: 0 8px 20px -6px rgba(0,0,0,0.04);
+        }
+        .chart-card h4 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; }
+        .dept-table-wrapper {
+            background: white; border-radius: 28px; padding: 1.2rem;
+            border: 1px solid #eef2f9; overflow-x: auto;
+        }
+        .dept-table-wrapper h4 { margin-bottom: 1rem; font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #ecf3f8; }
+        th { font-weight: 700; color: #2c5a6e; }
+        .badge-table { background: #eef2fa; padding: 4px 8px; border-radius: 20px; font-weight: 600; }
+        .modal {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); align-items: center; justify-content: center; z-index: 2000;
+        }
+        .modal-card {
+            background: white; width: 90%; max-width: 520px; border-radius: 36px; padding: 28px;
+            animation: fadeUp 0.2s; box-shadow: 0 30px 40px rgba(0,0,0,0.2);
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
+        .task-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eff3f8; cursor: pointer; }
+        .add-task-area { display: flex; gap: 10px; margin: 20px 0 12px; }
+        .add-task-area input { flex: 1; padding: 10px 16px; border-radius: 40px; border: 1px solid #cfdfea; outline: none; }
+        .add-task-area button { background: #1f6e43; border: none; padding: 0 18px; border-radius: 40px; color: white; font-weight: 600; cursor: pointer; }
+        footer { margin-top: 48px; text-align: center; font-size: 0.75rem; color: #8aa9c4; }
+        @media (max-width: 800px) { .app-wrapper { padding: 0 16px 24px; } .charts-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="app-wrapper">
+    <div class="top-nav">
+        <div class="logo-area"><div class="logo-icon"><i class="fas fa-chart-line"></i></div><div class="logo-text">Plan/Report</div></div>
+        <div class="nav-links">
+            <a href="home.html"><i class="fas fa-home"></i> Home</a>
+            <a href="./plan.html"><i class="fas fa-clipboard-list"></i> My Plan</a>
+            <a href="./my-reports.html"><i class="fas fa-file-alt"></i> My Report</a>
+            <a href="./all-plans.html"><i class="fas fa-layer-group"></i> All Plans</a>
+        </div>
+        <div class="nav-actions">
+            <div class="icon-btn" id="msgNotificationBtn"><i class="far fa-envelope"></i><span class="badge-notify"></span></div>
+            <div class="icon-btn" id="alertBellBtn"><i class="far fa-bell"></i><span class="badge-notify" id="bellBadge"></span></div>
+            <div class="icon-btn todo-btn" id="openTodoModalBtn"><i class="fas fa-check-circle"></i> To-Do</div>
+            <div class="icon-btn logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="year-tabs" id="yearTabsContainer"></div>
+        <select id="departmentFilter" class="dept-selector">
+            <option value="All">📊 All Sectors (MoA)</option>
+            <option value="Agriculture">Agricultural Investment and Product Marketing</option>
+            <option value="Inputs">Agricultural Inputs</option>
+            <option value="Mechanization">Mechanization</option>
+            <option value="Urban">Urban Agriculture</option>
+            <option value="Crop">Crop Development</option>
+            <option value="Protection">Plant Protection</option>
+            <option value="Horticulture">Horticulture Development</option>
+            <option value="Extension">Agriculture and Horticulture Extension</option>
+            <option value="Cotton">Cotton Development</option>
+            <option value="Livestock">Livestock and Fisheries Development</option>
+            <option value="Social Issues">Women and Social Issues</option>
+            <option value="Executive">Institutional Change Executive</option>
+        </select>
+    </div>
+
+    <!-- 6 KPI Cards Grid -->
+    <div class="dashboard-grid">
+        <div class="card"><div class="card-header"><h3>Annual Plan Submission</h3><div class="card-icon"><i class="fas fa-file-signature"></i></div></div><div class="card-value" id="annualPlanValue">--</div><div class="progress-bar"><div class="progress-fill" id="annualPlanFill"></div></div><div class="stat-row"><span>Submitted depts</span><span id="annualPlanSubtext">--</span></div></div>
+        <div class="card"><div class="card-header"><h3>Report Submission</h3><div class="card-icon"><i class="fas fa-upload"></i></div></div><div class="card-value" id="reportValue">--</div><div class="progress-bar"><div class="progress-fill" id="reportFill"></div></div><div class="stat-row"><span>Q1/Q2 Reports</span><span id="reportSubtext">--</span></div></div>
+        <div class="card"><div class="card-header"><h3>Budget Plan Management</h3><div class="card-icon"><i class="fas fa-coins"></i></div></div><div class="card-value" id="budgetValue">--</div><div class="progress-bar"><div class="progress-fill" id="budgetFill"></div></div><div class="stat-row"><span>Utilization rate</span><span id="budgetUtil">--</span></div></div>
+        <div class="card"><div class="card-header"><h3>Performance Tracking</h3><div class="card-icon"><i class="fas fa-chart-simple"></i></div></div><div class="card-value" id="performanceScore">--</div><div class="progress-bar"><div class="progress-fill" id="perfFill"></div></div><div class="stat-row"><span>KPIs achievement</span><span id="perfDetail">--</span></div></div>
+        <div class="card"><div class="card-header"><h3>Quarterly Reports</h3><div class="card-icon"><i class="fas fa-chart-column"></i></div></div><div class="card-value" id="quarterCount">--</div><div class="stat-row"><span>Periodic finalized</span><span id="quarterDetail">--</span></div><div class="badge-table" style="margin-top:12px; display:inline-block;"><i class="far fa-calendar"></i> Next due: Dec 20</div></div>
+        <div class="card"><div class="card-header"><h3>Approval Status</h3><div class="card-icon"><i class="fas fa-check-double"></i></div></div><div class="card-value" id="approvalValue">--</div><div class="progress-bar"><div class="progress-fill" id="approvalFill"></div></div><div class="stat-row"><span>Pending / Approved</span><span id="approvalDetail">--</span></div></div>
+    </div>
+
+    <div class="charts-row">
+        <div class="chart-card"><h4><i class="fas fa-chart-bar" style="color:#1f6e43;"></i> Budget Utilization by Department (current year)</h4><canvas id="budgetDeptChart" width="400" height="250" style="max-height:260px; width:100%"></canvas></div>
+        <div class="chart-card"><h4><i class="fas fa-chart-line" style="color:#1f6e43;"></i> Annual Plan Submission Trend (2017-2025)</h4><canvas id="planTrendChart" width="400" height="250" style="max-height:260px; width:100%"></canvas></div>
+    </div>
+
+    <div class="dept-table-wrapper">
+        <h4><i class="fas fa-building"></i> Department-wise Protection Performance &nbsp; <span id="tableYearLabel" style="font-size:0.75rem;">(year)</span></h4>
+        <table id="deptTable">
+            <thead><tr><th>Department</th><th>Plan Submit %</th><th>Report Submit %</th><th>Budget Util %</th><th>Performance Score</th></tr></thead>
+            <tbody id="deptTableBody"></tbody>
+        </table>
+    </div>
+    <footer>© 2025 Ministry of Protection | Live Data · Simulated Advanced Analytics</footer>
+</div>
+
+<!-- To-Do Modal (shared across pages, but tasks saved in localStorage) -->
+<div id="todoModal" class="modal">
+    <div class="modal-card">
+        <h3 style="display:flex; gap:10px;"><i class="fas fa-tasks" style="color:#1f6e43;"></i> My Action Items</h3>
+        <div id="todoListContainer"></div>
+        <div class="add-task-area">
+            <input type="text" id="newTaskInput" placeholder="Add new task e.g., Review Q2 report">
+            <button id="addTaskBtn"><i class="fas fa-plus"></i> Add</button>
+        </div>
+        <button class="close-modal" id="closeTodoModal" style="background:#1f6e43; border:none; padding:10px 20px; border-radius:40px; color:white; font-weight:600; margin-top:12px; width:100%;">Close</button>
+    </div>
+</div>
+
+<script>
+    // ---------- DATA MODELS (same as previous robust version) ----------
+    const overallYearData = {
+        2017: { annual:42, report:38, budgetVal:34.2, budgetPercent:44, perf:56, quarter:1, approval:33, annualSub:"6/14", reportSub:"5/14", budgetUtil:"44% spent", perfDetail:"Below target", quarterDetail:"Only Q1", approvalDetail:"3 approved" },
+        2018: { annual:55, report:48, budgetVal:38.1, budgetPercent:51, perf:62, quarter:2, approval:47, annualSub:"8/15", reportSub:"7/14", budgetUtil:"51% spent", perfDetail:"+6% vs LY", quarterDetail:"Q1/Q2", approvalDetail:"5 approved" },
+        2019: { annual:61, report:56, budgetVal:42.5, budgetPercent:58, perf:69, quarter:2, approval:54, annualSub:"9/15", reportSub:"8/14", budgetUtil:"58% spent", perfDetail:"Recovery", quarterDetail:"2 reports", approvalDetail:"6 approved" },
+        2020: { annual:70, report:68, budgetVal:45.2, budgetPercent:63, perf:75, quarter:3, approval:61, annualSub:"10/15", reportSub:"10/14", budgetUtil:"63% spent", perfDetail:"Resilient", quarterDetail:"Q1–Q3", approvalDetail:"8 approved" },
+        2021: { annual:78, report:75, budgetVal:49.3, budgetPercent:69, perf:80, quarter:3, approval:72, annualSub:"11/15", reportSub:"11/14", budgetUtil:"69% spent", perfDetail:"Strong", quarterDetail:"3/4", approvalDetail:"10 approved" },
+        2022: { annual:85, report:82, budgetVal:52.1, budgetPercent:74, perf:86, quarter:3, approval:79, annualSub:"12/15", reportSub:"12/14", budgetUtil:"74% spent", perfDetail:"Exceeding", quarterDetail:"3/4", approvalDetail:"12 approved" },
+        2023: { annual:91, report:88, budgetVal:57.4, budgetPercent:82, perf:90, quarter:4, approval:87, annualSub:"14/15", reportSub:"13/14", budgetUtil:"82% spent", perfDetail:"Near target", quarterDetail:"All Q", approvalDetail:"14 approved" },
+        2024: { annual:94, report:89, budgetVal:63.2, budgetPercent:85, perf:92, quarter:4, approval:88, annualSub:"14/15", reportSub:"13/14", budgetUtil:"85% spent", perfDetail:"Excellent", quarterDetail:"Final review", approvalDetail:"15 approved" },
+        2025: { annual:67, report:58, budgetVal:45.0, budgetPercent:60, perf:70, quarter:2, approval:48, annualSub:"7/15", reportSub:"8/14", budgetUtil:"60% spent", perfDetail:"Early stage", quarterDetail:"Q1 done", approvalDetail:"5 approved" }
+    };
+    const departments = ["Agriculture", "Inputs", "Mechanization", "Urban", "Crop", "Protection"];
+    let deptData = {};
+    for (let y of [2017,2018,2019,2020,2021,2022,2023,2024,2025]) {
+        deptData[y] = {};
+        for (let d of departments) {
+            let variation = (d === "Agriculture") ? (y-2015)*2 : (d === "Mechanization") ? (y-2015)*1.8 : (d === "Urban") ? (y-2015)*2.2 : (y-2015)*2;
+            let planBase = Math.min(98, 45 + variation + Math.floor(Math.random() * 8));
+            let reportBase = Math.min(96, 42 + variation + Math.floor(Math.random() * 10));
+            let budgetUtilBase = Math.min(92, 40 + variation + Math.floor(Math.random() * 12));
+            let perfBase = Math.min(95, 50 + variation + Math.floor(Math.random() * 12));
+            deptData[y][d] = {
+                plan_submit: planBase, report_submit: reportBase, budget_util_pct: budgetUtilBase,
+                budget_alloc_m: (35 + (y-2015)*2.8 + (d === "Urban" ? 12 : d === "Mechanization" ? 5 : 0)).toFixed(1),
+                performance: perfBase, quarter_count: y>=2023 ? 4 : (y>=2021 ? 3 : (y>=2019 ? 2 : 1)),
+                approval_pct: Math.min(93, 40 + variation + Math.floor(Math.random() * 12))
+            };
+        }
+    }
+
+    let currentYear = 2024;
+    let currentDept = "All";
+    let budgetChart, trendChart;
+
+    function getMetrics(year, department) {
+        if (department === "All") {
+            const d = overallYearData[year];
+            return { annual: d.annual, report: d.report, budgetVal: d.budgetVal, budgetPercent: d.budgetPercent, perf: d.perf, quarter: d.quarter, approval: d.approval, annualSub: d.annualSub, reportSub: d.reportSub, budgetUtil: d.budgetUtil, perfDetail: d.perfDetail, quarterDetail: d.quarterDetail, approvalDetail: d.approvalDetail };
+        } else {
+            const dep = deptData[year][department];
+            if(!dep) return getMetrics(year, "All");
+            return {
+                annual: dep.plan_submit, report: dep.report_submit, budgetVal: parseFloat(dep.budget_alloc_m), budgetPercent: dep.budget_util_pct, perf: dep.performance,
+                quarter: dep.quarter_count, approval: dep.approval_pct,
+                annualSub: `${Math.floor(dep.plan_submit/7)}/6 depts`, reportSub: `${Math.floor(dep.report_submit/8)}/6`, budgetUtil: `${dep.budget_util_pct}% spent`,
+                perfDetail: `${dep.performance} pts`, quarterDetail: `${dep.quarter_count}/4`, approvalDetail: `${dep.approval_pct}% approved`
+            };
+        }
+    }
+
+    function updateKPICards() {
+        const m = getMetrics(currentYear, currentDept);
+        document.getElementById('annualPlanValue').innerText = m.annual + '%';
+        document.getElementById('annualPlanFill').style.width = m.annual + '%';
+        document.getElementById('annualPlanSubtext').innerText = m.annualSub;
+        document.getElementById('reportValue').innerText = m.report + '%';
+        document.getElementById('reportFill').style.width = m.report + '%';
+        document.getElementById('reportSubtext').innerText = m.reportSub;
+        document.getElementById('budgetValue').innerHTML = `₿ ${m.budgetVal}M`;
+        document.getElementById('budgetFill').style.width = m.budgetPercent + '%';
+        document.getElementById('budgetUtil').innerText = m.budgetUtil;
+        document.getElementById('performanceScore').innerHTML = m.perf + `<span style="font-size:1rem;"> pts</span>`;
+        document.getElementById('perfFill').style.width = m.perf + '%';
+        document.getElementById('perfDetail').innerText = m.perfDetail;
+        document.getElementById('quarterCount').innerHTML = m.quarter + `<span style="font-size:1rem;">/4</span>`;
+        document.getElementById('quarterDetail').innerText = m.quarterDetail;
+        document.getElementById('approvalValue').innerText = m.approval + '%';
+        document.getElementById('approvalFill').style.width = m.approval + '%';
+        document.getElementById('approvalDetail').innerText = m.approvalDetail;
+    }
+
+    function updateDepartmentTable() {
+        const tbody = document.getElementById('deptTableBody');
+        tbody.innerHTML = '';
+        document.getElementById('tableYearLabel').innerText = `(FY ${currentYear})`;
+        for (let dept of departments) {
+            const data = deptData[currentYear][dept];
+            if(data){
+                tbody.innerHTML += `<tr><td><strong>${dept}</strong></td><td><span class="badge-table">${data.plan_submit}%</span></td><td>${data.report_submit}%</td><td>${data.budget_util_pct}%</td><td>${data.performance}</td></tr>`;
+            }
+        }
+    }
+
+    function renderBudgetChart() {
+        const ctx = document.getElementById('budgetDeptChart').getContext('2d');
+        const labels = departments;
+        const utilData = departments.map(d => deptData[currentYear][d].budget_util_pct);
+        if(budgetChart) budgetChart.destroy();
+        budgetChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Budget Utilization (%)', data: utilData, backgroundColor: '#2c9b62', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: true } });
+    }
+
+    function renderTrendChart() {
+        const ctx = document.getElementById('planTrendChart').getContext('2d');
+        const years = [2017,2018,2019,2020,2021,2022,2023,2024,2025];
+        let trendData = (currentDept === "All") ? years.map(y => overallYearData[y].annual) : years.map(y => deptData[y][currentDept]?.plan_submit || 50);
+        if(trendChart) trendChart.destroy();
+        trendChart = new Chart(ctx, { type: 'line', data: { labels: years, datasets: [{ label: `Plan Submission % (${currentDept === "All" ? "National" : currentDept})`, data: trendData, borderColor: '#1f6e43', tension: 0.3, fill: true }] }, options: { responsive: true } });
+    }
+
+    function fullRefresh() { updateKPICards(); updateDepartmentTable(); renderBudgetChart(); renderTrendChart(); updateNotificationBadges(); }
+
+    // ---------- To-Do with localStorage ----------
+    let todoTasks = [];
+    function loadTodoFromLocal() {
+        const stored = localStorage.getItem('pmis_todo_tasks');
+        if(stored) {
+            todoTasks = JSON.parse(stored);
+        } else {
+            todoTasks = [
+                { id: Date.now()+1, text: "Submit Q4 Annual Plan draft", completed: false },
+                { id: Date.now()+2, text: "Review budget utilization for agriculture sector", completed: false },
+                { id: Date.now()+3, text: "Update performance indicators (IRR)", completed: false },
+                { id: Date.now()+4, text: "Finalize quarterly report summary", completed: true }
+            ];
+        }
+    }
+    function saveTodoToLocal() { localStorage.setItem('pmis_todo_tasks', JSON.stringify(todoTasks)); }
+    function renderTodoList() {
+        const container = document.getElementById('todoListContainer');
+        if(!container) return;
+        container.innerHTML = '';
+        todoTasks.forEach(task => {
+            const div = document.createElement('div'); div.className = 'task-item';
+            div.innerHTML = `<i class="far ${task.completed ? 'fa-check-circle' : 'fa-circle'}" style="color:${task.completed ? '#1f6e43' : '#94a3b8'}; cursor:pointer;"></i>
+                             <span style="${task.completed ? 'text-decoration:line-through; color:#8ba0bc;' : ''} flex:1">${escapeHtml(task.text)}</span>
+                             <i class="fas fa-trash-alt" style="color:#b91c1c; cursor:pointer; opacity:0.6"></i>`;
+            div.querySelector('.fa-circle, .fa-check-circle')?.addEventListener('click', () => { task.completed = !task.completed; saveTodoToLocal(); renderTodoList(); updateNotificationBadges(); });
+            div.querySelector('.fa-trash-alt')?.addEventListener('click', () => { todoTasks = todoTasks.filter(t => t.id !== task.id); saveTodoToLocal(); renderTodoList(); updateNotificationBadges(); });
+            container.appendChild(div);
+        });
+    }
+    function addTask(text) { if(text.trim()) { todoTasks.push({ id: Date.now(), text: text.trim(), completed: false }); saveTodoToLocal(); renderTodoList(); updateNotificationBadges(); } }
+    function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+    function updateNotificationBadges() { const pending = todoTasks.filter(t => !t.completed).length; const bell = document.getElementById('bellBadge'); if(bell) bell.style.display = pending > 0 ? 'block' : 'none'; }
+
+    // modal controls
+    const modal = document.getElementById('todoModal');
+    document.getElementById('openTodoModalBtn').addEventListener('click', () => { renderTodoList(); modal.style.display = 'flex'; });
+    document.getElementById('closeTodoModal').addEventListener('click', () => { modal.style.display = 'none'; });
+    document.getElementById('addTaskBtn').addEventListener('click', () => { const inp = document.getElementById('newTaskInput'); if(inp.value) addTask(inp.value); inp.value = ''; });
+    window.addEventListener('click', (e) => { if(e.target === modal) modal.style.display = 'none'; });
+
+    // other event listeners
+    document.getElementById('msgNotificationBtn').addEventListener('click', () => alert("📬 Inbox: 3 unread messages from Budget Directorate."));
+    document.getElementById('alertBellBtn').addEventListener('click', () => { alert(`🔔 Pending tasks: ${todoTasks.filter(t => !t.completed).length} · Plan deadline Dec 20.`); });
+    document.getElementById('logoutBtn').addEventListener('click', () => { if(confirm("Sign out?")) alert("Logged out."); });
+    document.getElementById('departmentFilter').addEventListener('change', (e) => { currentDept = e.target.value; fullRefresh(); });
+
+    // Year tabs
+    const yearsList = [2017,2018,2019,2020,2021,2022,2023,2024,2025];
+    function buildYearTabs() {
+        const container = document.getElementById('yearTabsContainer'); container.innerHTML = '';
+        yearsList.forEach(year => {
+            const btn = document.createElement('button'); btn.className = `year-btn ${year === currentYear ? 'active' : ''}`; btn.textContent = year;
+            btn.addEventListener('click', () => { currentYear = year; document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); fullRefresh(); });
+            container.appendChild(btn);
+        });
+    }
+
+    // initial load
+    loadTodoFromLocal();
+    renderTodoList();
+    buildYearTabs();
+    fullRefresh();
+    updateNotificationBadges();
+</script>
+</body>
+</html>

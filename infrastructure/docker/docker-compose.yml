@@ -1,0 +1,184 @@
+services:
+  postgres:
+    profiles: ["dev", "prod"]
+    image: postgres:16-alpine
+    hostname: postgres
+    environment:
+      POSTGRES_USER: moa
+      POSTGRES_PASSWORD: moa
+      POSTGRES_DB: moa_portal
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moa -d moa_portal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  server:
+    profiles: ["prod"]
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.server
+      target: runtime
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET:-replace_me}
+      MOA_SERVER_URL: http://server:4000
+      DATABASE_URL: postgres://moa:moa@postgres:5432/moa_portal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - server_uploads:/app/public/uploads
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health | grep -q '\"status\":\"ok\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - backend
+
+  shell:
+    profiles: ["prod"]
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.shell
+      target: runtime
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-replace_me}
+      NEXT_PUBLIC_SERVER_URL: ""
+      MOA_SERVER_GRAPHQL_URL: http://server:4000/graphql
+    expose:
+      - "3000"
+    depends_on:
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - backend
+
+  nginx:
+    profiles: ["prod"]
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.nginx
+    environment:
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-localhost}
+      NGINX_SHELL_UPSTREAM: shell:3000
+      NGINX_SERVER_UPSTREAM: server:4000
+      NGINX_SSL_CERT: /etc/nginx/certs/dev.crt
+      NGINX_SSL_KEY: /etc/nginx/certs/dev.key
+    depends_on:
+      shell:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - nginx_certs:/etc/nginx/certs
+      - nginx_logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --no-check-certificate https://localhost/nginx-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - edge
+      - backend
+
+  nginx-dev:
+    profiles: ["dev-proxy"]
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.nginx
+    environment:
+      NGINX_SERVER_NAME: localhost
+      NGINX_SHELL_UPSTREAM: host.docker.internal:3000
+      NGINX_SERVER_UPSTREAM: host.docker.internal:4000
+      NGINX_SSL_CERT: /etc/nginx/certs/dev.crt
+      NGINX_SSL_KEY: /etc/nginx/certs/dev.key
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - nginx_certs:/etc/nginx/certs
+      - nginx_logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --no-check-certificate https://localhost/nginx-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - edge
+
+  server-dev:
+    profiles: ["dev"]
+    image: node:20-bookworm
+    working_dir: /workspace/apps/server
+    volumes:
+      - ../..:/workspace
+    environment:
+      DATABASE_URL: postgres://moa:moa@postgres:5432/moa_portal
+      JWT_SECRET: ${JWT_SECRET:-moa_dev_jwt_secret_change_in_production}
+      MOA_SERVER_URL: http://server-dev:4000
+      PORT: 4000
+    command: sh -c "/workspace/apps/server/node_modules/.bin/nest start --watch"
+    ports:
+      - "4000:4000"
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  shell-dev:
+    profiles: ["dev"]
+    image: node:20-bookworm
+    working_dir: /workspace/apps/shell
+    volumes:
+      - ../..:/workspace
+    environment:
+      MOA_SERVER_GRAPHQL_URL: http://server-dev:4000/graphql
+      JWT_SECRET: ${JWT_SECRET:-moa_dev_jwt_secret_change_in_production}
+      NODE_ENV: development
+    command: sh -c "/workspace/apps/shell/node_modules/.bin/next dev -H 0.0.0.0 -p 3000"
+    ports:
+      - "3000:3000"
+    networks:
+      - backend
+    depends_on:
+      - server-dev
+
+volumes:
+  nginx_certs:
+  nginx_logs:
+  pgdata:
+  server_uploads:
+
+networks:
+  edge:
+    driver: bridge
+  backend:
+    driver: bridge

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOA | Secure Communication Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-green: #2ea354;
+            --primary-light: #eaf6ee;
+            --bg-main: #f8fafc;
+            --sidebar-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --me-bubble: #2ea354;
+            --other-bubble: #ffffff;
+        }
+
+        body.dark {
+            --bg-main: #0f172a;
+            --sidebar-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --other-bubble: #334155;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { height: 100vh; display: flex; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 350px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 10; }
+        .sidebar-header { padding: 25px; border-bottom: 1px solid var(--border-color); }
+        .sidebar-header h2 { font-size: 1.25rem; font-weight: 800; margin-bottom: 15px; color: var(--primary-green); }
+        
+        .search-container { position: relative; }
+        .search-container i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .search-container input { width: 100%; padding: 12px 12px 12px 40px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-main); outline: none; font-size: 0.9rem; }
+
+        .contact-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .contact { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; cursor: pointer; transition: 0.2s; margin-bottom: 4px; }
+        .contact:hover { background: var(--primary-light); }
+        body.dark .contact:hover { background: rgba(46, 163, 84, 0.1); }
+        .contact.active { background: var(--primary-light); border-left: 4px solid var(--primary-green); }
+        
+        .avatar-wrapper { position: relative; }
+        .contact img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #eee; }
+        .status-dot { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #22c55e; border: 2px solid #fff; border-radius: 50%; }
+
+        .contact-info { flex: 1; overflow: hidden; }
+        .contact-info .name { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; display: flex; justify-content: space-between; }
+        .contact-info .last-msg { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .badge { background: var(--primary-green); color: white; font-size: 0.7rem; padding: 2px 7px; border-radius: 10px; font-weight: 800; }
+
+        /* --- CHAT AREA --- */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-main); position: relative; }
+        
+        /* Header */
+        .chat-header { height: 80px; padding: 0 30px; display: flex; align-items: center; justify-content: space-between; background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color); }
+        .header-user { display: flex; align-items: center; gap: 15px; }
+        .header-user h4 { font-weight: 700; }
+        .header-user p { font-size: 0.8rem; color: #22c55e; font-weight: 600; }
+        
+        .header-actions { display: flex; gap: 15px; }
+        .action-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--bg-main); cursor: pointer; color: var(--text-muted); transition: 0.2s; }
+        .action-icon:hover { color: var(--primary-green); background: var(--primary-light); }
+
+        /* Messages */
+        .messages-container { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background-image: radial-gradient(var(--border-color) 1px, transparent 1px); background-size: 20px 20px; }
+        
+        .message { max-width: 60%; display: flex; flex-direction: column; }
+        .msg-content { padding: 12px 18px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .msg-time { font-size: 0.7rem; color: var(--text-muted); margin-top: 5px; font-weight: 600; }
+
+        .message.me { align-self: flex-end; }
+        .message.me .msg-content { background: var(--me-bubble); color: white; border-bottom-right-radius: 4px; }
+        .message.me .msg-time { align-self: flex-end; }
+
+        .message.other { align-self: flex-start; }
+        .message.other .msg-content { background: var(--other-bubble); color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
+
+        /* Input */
+        .input-area { padding: 20px 30px; background: var(--sidebar-bg); border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px; }
+        .input-wrapper { flex: 1; background: var(--bg-main); padding: 5px 15px; border-radius: 15px; display: flex; align-items: center; border: 1px solid var(--border-color); }
+        .input-wrapper input { flex: 1; padding: 10px; border: none; background: transparent; outline: none; color: var(--text-main); font-size: 0.95rem; }
+        .send-btn { width: 45px; height: 45px; background: var(--primary-green); color: white; border: none; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: 0.2s; }
+        .send-btn:hover { transform: scale(1.05); background: #228241; }
+
+        /* Empty State */
+        .empty-chat { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-muted); }
+        .empty-chat i { font-size: 4rem; color: var(--primary-green); opacity: 0.2; margin-bottom: 20px; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { width: 80px; }
+            .sidebar-header, .contact-info, .search-container { display: none; }
+            .contact { justify-content: center; padding: 10px; }
+            .chat-header { padding: 0 15px; }
+        }
+    </style>
+</head>
+<body class="light">
+
+<div class="sidebar">
+    <div class="sidebar-header">
+        <h2>MOA Connect</h2>
+        <div class="search-container">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Search staff or teams...">
+        </div>
+    </div>
+
+    <div class="contact-list">
+        <div class="contact active">
+            <div class="avatar-wrapper">
+                <img src="https://i.pravatar.cc/150?u=abay" alt="Abayeneh">
+                <div class="status-dot"></div>
+            </div>
+            <div class="contact-info">
+                <div class="name">Abayeneh Belachew <span class="badge">3</span></div>
+                <div class="last-msg">The soil analysis report is ready for...</div>
+            </div>
+        </div>
+
+        <div class="contact">
+            <div class="avatar-wrapper">
+                <img src="https://i.pravatar.cc/150?u=nahome" alt="Nahome">
+                <div class="status-dot"></div>
+            </div>
+            <div class="contact-info">
+                <div class="name">Nahome Zeleke <span style="font-size: 0.7rem; color: var(--text-muted);">10:45 AM</span></div>
+                <div class="last-msg">Did you check the new irrigation...</div>
+            </div>
+        </div>
+
+        <div class="contact">
+            <div class="avatar-wrapper">
+                <img src="https://i.pravatar.cc/150?u=marta" alt="Marta">
+            </div>
+            <div class="contact-info">
+                <div class="name">Marta Girma</div>
+                <div class="last-msg">Input Team meeting starts in 5...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="chat-area">
+    <div class="chat-header">
+        <div class="header-user">
+            <img src="https://i.pravatar.cc/150?u=abay" style="width: 45px; height: 45px; border-radius: 50%;" alt="">
+            <div>
+                <h4>Abayeneh Belachew</h4>
+                <p>Online • KUKUNET Digital</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="action-icon" onclick="toggleTheme()"><i class="fa-solid fa-moon" id="themeIcon"></i></div>
+            <div class="action-icon"><i class="fa-solid fa-phone"></i></div>
+            <div class="action-icon"><i class="fa-solid fa-video"></i></div>
+            <div class="action-icon"><i class="fa-solid fa-ellipsis-vertical"></i></div>
+        </div>
+    </div>
+
+    <div class="messages-container" id="chatBox">
+        <div class="message other">
+            <div class="msg-content">Hello Abel! Have you reviewed the monthly crop yield statistics from the Oromia region yet?</div>
+            <div class="msg-time">09:15 AM</div>
+        </div>
+
+        <div class="message me">
+            <div class="msg-content">Hi Abayeneh! Yes, I just finished looking through the data. The 12% increase in wheat production looks promising.</div>
+            <div class="msg-time">09:20 AM</div>
+        </div>
+
+        <div class="message other">
+            <div class="msg-content">Excellent. I've scheduled a meeting with the Input Team to discuss fertilizer distribution for the next phase. Are you available at 2 PM?</div>
+            <div class="msg-time">09:22 AM</div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <div class="action-icon"><i class="fa-solid fa-paperclip"></i></div>
+        <div class="input-wrapper">
+            <input type="text" placeholder="Write your message here..." id="msgInput">
+            <i class="fa-regular fa-face-smile" style="color: var(--text-muted); cursor: pointer;"></i>
+        </div>
+        <button class="send-btn" onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script>
+    function toggleTheme() {
+        const body = document.body;
+        const icon = document.getElementById('themeIcon');
+        body.classList.toggle('dark');
+        
+        if(body.classList.contains('dark')) {
+            icon.classList.replace('fa-moon', 'fa-sun');
+        } else {
+            icon.classList.replace('fa-sun', 'fa-moon');
+        }
+    }
+
+    function sendMsg() {
+        const input = document.getElementById('msgInput');
+        const chatBox = document.getElementById('chatBox');
+        
+        if(input.value.trim() === "") return;
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message me';
+        msgDiv.innerHTML = `
+            <div class="msg-content">${input.value}</div>
+            <div class="msg-time">Just now</div>
+        `;
+        
+        chatBox.appendChild(msgDiv);
+        input.value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Allow Enter key to send
+    document.getElementById('msgInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') sendMsg();
+    });
+</script>
+
+</body>
+</html>

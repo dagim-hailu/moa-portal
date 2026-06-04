@@ -1,0 +1,16 @@
+FROM node:20-alpine AS base
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9.12.1 --activate
+
+FROM base AS builder
+COPY . .
+RUN pnpm install
+RUN pnpm --filter @moa/shared build
+RUN pnpm --filter @moa/server build
+
+FROM base AS runtime
+ENV NODE_ENV=production
+ENV PORT=4000
+COPY --from=builder /app /app
+EXPOSE 4000
+CMD ["pnpm", "--filter", "@moa/server", "start"]

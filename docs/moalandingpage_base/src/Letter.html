@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>LetterFlow | Professional Letter Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f5f9ff;
+            font-family: 'Inter', sans-serif;
+            color: #1a2c3e;
+            transition: background 0.2s, color 0.2s;
+        }
+        body.dark-mode {
+            background: #0f1724;
+            color: #eef2ff;
+        }
+        /* cards and containers */
+        body.dark-mode .card, body.dark-mode .top-nav, body.dark-mode .stat-card,
+        body.dark-mode .filters-card, body.dark-mode .table-container, body.dark-mode .modal-content,
+        body.dark-mode .form-container, body.dark-mode .template-card {
+            background: #1a2538;
+            border-color: #2d3a4e;
+            color: #eef2ff;
+        }
+        body.dark-mode table th { background: #111927; color: #cbd5e6; }
+        body.dark-mode table td { border-bottom-color: #2d3a4e; }
+        body.dark-mode .filter-select, body.dark-mode .search-input,
+        body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+            background: #0f1724;
+            border-color: #334155;
+            color: white;
+        }
+        .app-container { max-width: 1400px; margin: 0 auto; padding: 24px 28px 40px; }
+        /* Top Navigation */
+        .top-nav {
+            background: white;
+            border-radius: 32px;
+            padding: 12px 28px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            border: 1px solid #eef2fa;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .logo-icon { background: #1e6f4c; width: 42px; height: 42px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.3rem; box-shadow: 0 6px 12px -6px rgba(30,111,76,0.3); }
+        .logo-text { font-weight: 800; font-size: 1.3rem; background: linear-gradient(135deg, #1b6b4c, #2c9f6e); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        .nav-links { display: flex; gap: 28px; align-items: center; }
+        .nav-links a {
+            text-decoration: none; font-weight: 600; font-size: 0.9rem; color: #4a5b6e;
+            transition: 0.2s; cursor: pointer; padding: 6px 0;
+        }
+        .nav-links a.active { color: #1e6f4c; border-bottom: 2.5px solid #1e6f4c; }
+        body.dark-mode .nav-links a.active { color: #34d399; border-bottom-color: #34d399; }
+        .user-section { display: flex; align-items: center; gap: 20px; }
+        .dark-toggle, .lang-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; }
+        .lang-toggle { display: flex; gap: 8px; background: #f0f4fa; border-radius: 40px; padding: 4px; }
+        .lang-btn { padding: 6px 14px; border-radius: 30px; font-weight: 600; font-size: 0.8rem; transition: 0.2s; }
+        .lang-btn.active { background: white; color: #1e6f4c; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        /* Dashboard stats */
+        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 32px; }
+        .stat-card {
+            background: white; border-radius: 28px; padding: 20px 24px; display: flex; align-items: center;
+            justify-content: space-between; border: 1px solid #eef2fa; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -12px rgba(0,0,0,0.08); }
+        .stat-number { font-size: 2.2rem; font-weight: 800; margin-top: 6px; letter-spacing: -0.02em; }
+        .filters-card {
+            background: white; border-radius: 28px; padding: 20px 28px; margin-bottom: 32px;
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+            border: 1px solid #eef2fa;
+        }
+        .filters-group { display: flex; flex-wrap: wrap; gap: 12px; }
+        .filter-select, .search-input { background: #f8fafd; border: 1px solid #e2e8f0; padding: 10px 18px; border-radius: 40px; font-family: 'Inter'; outline: none; font-size: 0.85rem; transition: 0.2s; }
+        .filter-select:focus, .search-input:focus { border-color: #1e6f4c; box-shadow: 0 0 0 3px rgba(30,111,76,0.1); }
+        .btn-primary {
+            background: #1e6f4c; color: white; border: none; padding: 10px 24px; border-radius: 40px;
+            font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+            transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .btn-primary:hover { background: #155a3f; transform: scale(0.98); }
+        .btn-secondary { background: transparent; border: 1px solid #cbd5e1; padding: 10px 24px; border-radius: 40px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        .btn-secondary:hover { background: rgba(0,0,0,0.03); border-color: #1e6f4c; }
+        /* Table */
+        .table-container { background: white; border-radius: 28px; overflow-x: auto; border: 1px solid #eef2fa; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 16px 12px; text-align: left; border-bottom: 1px solid #edf2f8; }
+        th { font-weight: 700; background: #fafcff; cursor: pointer; }
+        tr:hover { background: #f9fbfe; }
+        body.dark-mode tr:hover { background: #1f2a3c; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 700; }
+        .status-draft { background: #eef2ff; color: #3b4f8c; }
+        .status-pending { background: #fff0db; color: #b45f1b; }
+        .status-approved { background: #e0f2e9; color: #1f6e43; }
+        .status-archived { background: #e9edf2; color: #5b6e8c; }
+        .action-icons i { margin: 0 5px; cursor: pointer; color: #6c819e; transition: 0.2s; font-size: 0.9rem; }
+        .action-icons i:hover { color: #1e6f4c; }
+        .pagination { display: flex; justify-content: flex-end; gap: 12px; padding: 20px 24px; }
+        .page-btn { background: white; border: 1px solid #dee6ef; padding: 6px 14px; border-radius: 30px; cursor: pointer; font-weight: 500; }
+        .active-page { background: #1e6f4c; color: white; border: none; }
+        /* Modal */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); align-items: center; justify-content: center; z-index: 2000; }
+        .modal-content { background: white; width: 90%; max-width: 480px; border-radius: 36px; padding: 28px; }
+        /* ----- MODERN FORM STYLES ----- */
+        .form-container {
+            background: white; border-radius: 36px; padding: 32px 36px; border: 1px solid #eef2fa;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.05);
+        }
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px 32px; }
+        .full-width { grid-column: span 2; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #5b6e8c; display: flex; align-items: center; gap: 8px; }
+        body.dark-mode .form-group label { color: #9aa9bb; }
+        .form-group label i { width: 18px; color: #1e6f4c; }
+        input, select, textarea {
+            padding: 14px 18px; border-radius: 24px; border: 1px solid #e2e8f0; background: white;
+            font-family: 'Inter'; font-size: 0.9rem; transition: 0.2s; outline: none;
+        }
+        input:focus, select:focus, textarea:focus { border-color: #1e6f4c; box-shadow: 0 0 0 3px rgba(30,111,76,0.1); }
+        .action-buttons { display: flex; gap: 16px; justify-content: flex-end; margin-top: 40px; border-top: 1px solid #edf2f8; padding-top: 28px; }
+        /* TEMPLATES MODERN CARDS */
+        .templates-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 28px; gap: 16px; }
+        .search-templates { background: #f8fafd; border: 1px solid #e2e8f0; border-radius: 48px; padding: 8px 20px; display: flex; align-items: center; gap: 8px; }
+        .search-templates input { border: none; background: transparent; width: 220px; outline: none; }
+        .templates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 28px; margin-top: 12px; }
+        .template-card {
+            background: white; border-radius: 28px; padding: 24px; border: 1px solid #eef2fa;
+            transition: all 0.25s ease; cursor: pointer;
+        }
+        .template-card:hover { transform: translateY(-6px); box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1); border-color: #cde0ed; }
+        .template-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .template-category { display: inline-block; background: #f0f4fa; padding: 4px 14px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; color: #2c5f8a; }
+        .template-preview { font-size: 0.85rem; color: #5c6f87; line-height: 1.5; margin: 16px 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .template-actions { display: flex; gap: 12px; margin-top: 18px; }
+        .toast-msg { position: fixed; bottom: 28px; right: 28px; background: #1e6f4c; color: white; padding: 14px 28px; border-radius: 60px; font-weight: 500; opacity: 0; transition: 0.2s; z-index: 2000; pointer-events: none; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .view-section { display: none; }
+        .view-section.active-view { display: block; animation: fadeIn 0.25s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 860px) {
+            .app-container { padding: 16px; }
+            .top-nav { flex-direction: column; gap: 16px; align-items: stretch; }
+            .form-grid { grid-template-columns: 1fr; }
+            .full-width { grid-column: span 1; }
+            .templates-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- Top Navigation -->
+    <div class="top-nav">
+        <div class="logo-area"><div class="logo-icon"><i class="fas fa-envelope-open-text"></i></div><div class="logo-text">LetterFlow</div></div>
+        <div class="nav-links" id="globalNav">
+            <a data-view="dashboard" class="active">Dashboard</a>
+            <a data-view="create">Create Letter</a>
+            <a data-view="templates">Templates</a>
+            <a data-memo="memo">Memo</a>
+        </div>
+        <div class="user-section">
+            <div class="notification-icon" id="notifyBell" style="position:relative; cursor:pointer;"><i class="far fa-bell fa-lg"></i><span class="badge" id="notificationBadge" style="position:absolute; top:-5px; right:-8px; background:#dc2626; color:white; font-size:0.65rem; border-radius:20px; padding:2px 6px;">3</span></div>
+            <div class="lang-toggle" id="langToggle"><button class="lang-btn active" data-lang="en">EN</button><button class="lang-btn" data-lang="am">አማ</button></div>
+            <button class="dark-toggle" id="darkModeToggle"><i class="fas fa-moon"></i></button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="dashboardView" class="view-section active-view">
+        <h2 id="dashTitle" style="margin-bottom: 24px; font-weight: 700;">📄 Letter Dashboard</h2>
+        <div class="dashboard-stats">
+            <div class="stat-card"><div><h4 id="statTotalLabel" style="font-weight:500;">Total Letters</h4><div class="stat-number" id="totalLetters">0</div></div><i class="fas fa-inbox fa-2x" style="color:#2c9f6e; opacity:0.7;"></i></div>
+            <div class="stat-card"><div><h4 id="statPendingLabel" style="font-weight:500;">Pending</h4><div class="stat-number" id="pendingCount">0</div></div><i class="fas fa-clock fa-2x" style="color:#e6a017; opacity:0.7;"></i></div>
+            <div class="stat-card"><div><h4 id="statArchivedLabel" style="font-weight:500;">Archived</h4><div class="stat-number" id="archivedCount">0</div></div><i class="fas fa-archive fa-2x" style="color:#6c819e; opacity:0.7;"></i></div>
+        </div>
+        <div class="filters-card">
+            <div class="filters-group">
+                <select id="yearFilter" class="filter-select"><option value="">All Years</option></select>
+                <select id="categoryFilter" class="filter-select"><option value="">All Categories</option></select>
+                <select id="deptFilter" class="filter-select"><option value="">All Departments</option></select>
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search subject, ID...">
+            </div>
+            <div><button class="btn-primary" id="createFromDashboardBtn"><i class="fas fa-plus-circle"></i> New Letter</button></div>
+        </div>
+        <div class="table-container">
+            <table id="letterTable"><thead><tr id="tableHeaders"><tr></thead><tbody id="tableBody"></tbody></table>
+            <div class="pagination" id="paginationControls"></div>
+        </div>
+    </div>
+
+    <!-- CREATE / EDIT LETTER VIEW - MODERNIZED -->
+    <div id="createView" class="view-section">
+        <div class="form-container">
+            <h2 id="formTitle" style="margin-bottom: 24px; font-weight: 700;">✍️ Compose Letter</h2>
+            <div class="form-grid">
+                <div class="form-group"><label><i class="fas fa-user-tie"></i> <span id="lblRecipient">Recipient / To</span></label><input type="text" id="recipient" placeholder="e.g., Finance Dept, John Doe"></div>
+                <div class="form-group"><label><i class="fas fa-heading"></i> <span id="lblSubject">Subject / Title</span></label><input type="text" id="subject" placeholder="Subject line"></div>
+                <div class="form-group"><label><i class="fas fa-envelope"></i> <span id="lblType">Letter Type</span></label><select id="type"><option>Outgoing</option><option>Incoming</option></select></div>
+                <div class="form-group"><label><i class="fas fa-tag"></i> <span id="lblCategory">Category</span></label><select id="category"><option>Official</option><option>Personal</option><option>Administrative</option></select></div>
+                <div class="form-group"><label><i class="fas fa-building"></i> <span id="lblDepartment">Department</span></label><select id="department"><option>HR</option><option>Finance</option><option>Admin</option><option>IT</option></select></div>
+                <div class="form-group"><label><i class="fas fa-flag-checkered"></i> <span id="lblStatus">Status</span></label><select id="status"><option>Draft</option><option>Pending</option><option>Approved</option><option>Archived</option></select></div>
+                <div class="full-width form-group"><label><i class="fas fa-file-alt"></i> <span id="lblDescription">Description / Content</span></label><textarea rows="5" id="description" placeholder="Write full letter content..."></textarea></div>
+                <div class="form-group"><label><i class="fas fa-paperclip"></i> <span id="lblAttachment">Attachment (filename)</span></label><input type="text" id="attachmentName" placeholder="e.g., report.pdf"></div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-secondary" id="cancelCreateBtn"><i class="fas fa-times"></i> <span id="cancelTxt">Cancel</span></button>
+                <button class="btn-secondary" id="saveDraftBtn"><i class="fas fa-save"></i> <span id="saveDraftTxt">Save Draft</span></button>
+                <button class="btn-primary" id="submitLetterBtn"><i class="fas fa-paper-plane"></i> <span id="submitTxt">Submit Letter</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEMPLATES VIEW - MODERN CARDS -->
+    <div id="templatesView" class="view-section">
+        <div class="form-container" style="padding: 28px 32px;">
+            <div class="templates-header">
+                <h2 id="templatesTitle" style="font-weight: 700;">📚 Letter Templates</h2>
+                <div style="display: flex; gap: 18px; align-items: center;">
+                    <div class="search-templates"><i class="fas fa-search" style="color:#8ba0bc;"></i><input type="text" id="searchTemplates" placeholder="Search templates..."></div>
+                    <button class="btn-primary" id="addTemplateBtn"><i class="fas fa-plus-circle"></i> <span id="addTemplateTxt">New Template</span></button>
+                </div>
+            </div>
+            <div class="templates-grid" id="templatesGrid"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Attachment Preview Modal -->
+<div id="fileModal" class="modal"><div class="modal-content"><h3 style="margin-bottom: 12px;">📎 Attachment</h3><p id="modalFileName"></p><button class="btn-primary" id="closeModalBtn" style="margin-top: 18px;">Close</button></div></div>
+<div id="toastMsg" class="toast-msg">✅ Done</div>
+
+<script>
+    // ---------- DATA & STORAGE ----------
+    let letters = [];
+    let editLetterId = null;
+    let currentView = "dashboard";
+    let currentTypeFilter = "all";
+    let currentSearch = "", currentYear = "", currentCategory = "", currentDept = "";
+    let sortColumn = "date", sortDirection = "desc";
+    let currentPage = 1, rowsPerPage = 6;
+    let currentLang = "en";
+
+    let templates = [
+        { id: 1, name: "Official Business Letter", category: "Official", content: "To: [Recipient]\nSubject: [Subject]\n\nDear Sir/Madam,\n\n[Body of the letter]\n\nSincerely,\n[Your Name]" },
+        { id: 2, name: "Meeting Minutes", category: "Administrative", content: "Meeting Title: [Title]\nDate: [Date]\nAttendees: [Names]\nAgenda:\n1. ...\nSummary: ..." },
+        { id: 3, name: "Leave Application", category: "Personal", content: "To: [Manager]\nSubject: Leave Request\n\nDear [Manager],\nI request leave from [start] to [end] due to [reason].\nThank you." }
+    ];
+
+    function loadData() {
+        const stored = localStorage.getItem("letterflow_letters");
+        if(stored) letters = JSON.parse(stored);
+        else {
+            letters = [
+                { id: "L-101", subject: "Annual Budget Report", description: "Q4 financial summary", date: "2025-02-10T14:30", type: "Outgoing", category: "Official", dept: "Finance", status: "Approved", attachment: "budget.pdf", recipient: "Finance Director" },
+                { id: "L-102", subject: "Procurement Request", description: "IT equipment", date: "2025-02-12T09:15", type: "Incoming", category: "Administrative", dept: "IT", status: "Pending", attachment: "procure.pdf", recipient: "IT Dept" },
+                { id: "L-103", subject: "Staff Meeting Minutes", description: "Strategic planning", date: "2025-02-05T11:00", type: "Outgoing", category: "Official", dept: "HR", status: "Approved", attachment: "minutes.pdf", recipient: "All Staff" },
+                { id: "L-104", subject: "Leave Application", description: "Annual leave", date: "2025-02-01T08:20", type: "Incoming", category: "Personal", dept: "HR", status: "Archived", attachment: "leave.pdf", recipient: "HR Manager" },
+                { id: "L-105", subject: "Vendor Contract", description: "Renewal agreement", date: "2025-02-14T16:45", type: "Outgoing", category: "Official", dept: "Finance", status: "Draft", attachment: "contract.pdf", recipient: "Vendor" }
+            ];
+        }
+        const storedTemplates = localStorage.getItem("letterflow_templates");
+        if(storedTemplates) templates = JSON.parse(storedTemplates);
+        updateNotificationBadge();
+    }
+    function saveLetters() { localStorage.setItem("letterflow_letters", JSON.stringify(letters)); }
+    function saveTemplates() { localStorage.setItem("letterflow_templates", JSON.stringify(templates)); }
+    function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+    function showToast(msg) { const toast = document.getElementById('toastMsg'); toast.innerText = msg; toast.style.opacity = '1'; setTimeout(() => toast.style.opacity = '0', 2500); }
+    function updateNotificationBadge() { const pendingCount = letters.filter(l => l.status === "Pending").length; document.getElementById('notificationBadge').innerText = pendingCount; }
+
+    function getFilteredLetters() {
+        let filtered = letters.filter(l => {
+            if (currentTypeFilter !== "all" && l.type !== currentTypeFilter) return false;
+            if (currentYear && !l.date.startsWith(currentYear)) return false;
+            if (currentCategory && l.category !== currentCategory) return false;
+            if (currentDept && l.dept !== currentDept) return false;
+            if (currentSearch && !l.subject.toLowerCase().includes(currentSearch.toLowerCase()) && !l.id.toLowerCase().includes(currentSearch.toLowerCase())) return false;
+            return true;
+        });
+        filtered.sort((a,b) => {
+            let aVal = a[sortColumn], bVal = b[sortColumn];
+            if(sortColumn === "date") aVal = new Date(a.date), bVal = new Date(b.date);
+            if(typeof aVal === "string") return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+        });
+        return filtered;
+    }
+
+    function renderDashboard() {
+        const filtered = getFilteredLetters();
+        const total = filtered.length;
+        const start = (currentPage-1)*rowsPerPage;
+        const paginated = filtered.slice(start, start+rowsPerPage);
+        const tbody = document.getElementById('tableBody');
+        if(paginated.length === 0) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px;">📭 No letters found</td></tr>';
+        else {
+            tbody.innerHTML = paginated.map(letter => {
+                let statusClass = letter.status === "Approved" ? "status-approved" : (letter.status === "Pending" ? "status-pending" : (letter.status === "Archived" ? "status-archived" : "status-draft"));
+                const attachIcon = letter.attachment ? `<i class="fas fa-paperclip attachment-preview" data-file="${escapeHtml(letter.attachment)}" style="cursor:pointer;"></i>` : `<i class="far fa-file"></i>`;
+                return `<tr>
+                    <td>${escapeHtml(letter.id)}</td>
+                    <td><a href="#" class="letter-link" data-id="${letter.id}" style="color:#1e6f4c; text-decoration:none; font-weight:500;">${escapeHtml(letter.subject)}</a></td>
+                    <td>${escapeHtml(letter.description.substring(0,60))}</td>
+                    <td>${new Date(letter.date).toLocaleString()}</td>
+                    <td><span class="status-badge" style="background:#eef2fa;">${letter.type}</span></td>
+                    <td class="attach-cell">${attachIcon}</td>
+                    <td><span class="status-badge ${statusClass}">${letter.status}</span></td>
+                    <td class="action-icons">
+                        <i class="fas fa-eye view-action" data-id="${letter.id}"></i>
+                        <i class="fas fa-edit edit-action" data-id="${letter.id}"></i>
+                        <i class="fas fa-download download-action" data-id="${letter.id}"></i>
+                        <i class="fas fa-trash-alt delete-action" data-id="${letter.id}" style="color:#c2410c;"></i>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        document.getElementById('totalLetters').innerText = filtered.length;
+        document.getElementById('pendingCount').innerText = filtered.filter(l=>l.status==="Pending").length;
+        document.getElementById('archivedCount').innerText = filtered.filter(l=>l.status==="Archived").length;
+        renderPagination(filtered.length);
+        attachTableEvents();
+    }
+
+    function attachTableEvents() {
+        document.querySelectorAll('.attachment-preview').forEach(el => el.addEventListener('click', (e) => { e.stopPropagation(); openFileModal(el.dataset.file); }));
+        document.querySelectorAll('.view-action').forEach(btn => btn.addEventListener('click', (e) => { const id = btn.dataset.id; const l = letters.find(l=>l.id===id); alert(`📄 ${l.subject}\nRecipient: ${l.recipient}\nContent: ${l.description}`); }));
+        document.querySelectorAll('.edit-action').forEach(btn => btn.addEventListener('click', (e) => { const id = btn.dataset.id; openEditLetter(id); }));
+        document.querySelectorAll('.download-action').forEach(btn => btn.addEventListener('click', () => showToast("📎 Download simulation")));
+        document.querySelectorAll('.delete-action').forEach(btn => btn.addEventListener('click', (e) => { const id = btn.dataset.id; if(confirm("Delete letter?")) { letters = letters.filter(l=>l.id!==id); saveLetters(); renderDashboard(); updateNotificationBadge(); showToast("Deleted"); } }));
+        document.querySelectorAll('.letter-link').forEach(link => link.addEventListener('click', (e) => { e.preventDefault(); alert("📄 Full letter preview."); }));
+    }
+    function renderPagination(totalRows) { /* same as before but kept concise */ const totalPages = Math.ceil(totalRows / rowsPerPage); const container = document.getElementById('paginationControls'); if(totalPages<=1){container.innerHTML='';return;} let html = `<button class="page-btn" id="prevPageBtn" ${currentPage===1 ? 'disabled' : ''}>Prev</button>`; for(let i=1;i<=totalPages;i++) html += `<button class="page-btn ${i===currentPage ? 'active-page' : ''}" data-page="${i}">${i}</button>`; html += `<button class="page-btn" id="nextPageBtn" ${currentPage===totalPages ? 'disabled' : ''}>Next</button>`; container.innerHTML = html; document.querySelectorAll('[data-page]').forEach(btn => btn.addEventListener('click', (e) => { currentPage = parseInt(btn.dataset.page); renderDashboard(); })); document.getElementById('prevPageBtn')?.addEventListener('click', () => { if(currentPage>1){currentPage--; renderDashboard();} }); document.getElementById('nextPageBtn')?.addEventListener('click', () => { if(currentPage<totalPages){currentPage++; renderDashboard();} }); }
+    function openEditLetter(id) { const letter = letters.find(l=>l.id===id); if(letter){ editLetterId = id; document.getElementById('recipient').value = letter.recipient || ''; document.getElementById('subject').value = letter.subject; document.getElementById('description').value = letter.description; document.getElementById('type').value = letter.type; document.getElementById('category').value = letter.category; document.getElementById('department').value = letter.dept; document.getElementById('status').value = letter.status; document.getElementById('attachmentName').value = letter.attachment || ''; document.getElementById('formTitle').innerText = (currentLang === 'en' ? '✏️ Edit Letter' : 'ደብዳቤ አርትዕ'); switchView('create'); } }
+    function submitLetterFromForm() { const subject = document.getElementById('subject').value.trim(); if(!subject){ alert("Subject required"); return; } const newLetter = { id: editLetterId ? editLetterId : ("L-" + Date.now()), subject, description: document.getElementById('description').value, date: new Date().toISOString(), type: document.getElementById('type').value, category: document.getElementById('category').value, dept: document.getElementById('department').value, status: document.getElementById('status').value, attachment: document.getElementById('attachmentName').value, recipient: document.getElementById('recipient').value }; if(editLetterId){ const index = letters.findIndex(l=>l.id===editLetterId); if(index !== -1) letters[index] = newLetter; editLetterId = null; showToast("Letter updated"); } else { letters.unshift(newLetter); showToast("Letter created"); } saveLetters(); updateNotificationBadge(); resetCreateForm(); switchView('dashboard'); renderDashboard(); }
+    function resetCreateForm() { document.getElementById('recipient').value = ''; document.getElementById('subject').value = ''; document.getElementById('description').value = ''; document.getElementById('type').value = 'Outgoing'; document.getElementById('category').value = 'Official'; document.getElementById('department').value = 'HR'; document.getElementById('status').value = 'Draft'; document.getElementById('attachmentName').value = ''; editLetterId = null; document.getElementById('formTitle').innerText = currentLang === 'en' ? '✍️ Compose Letter' : 'አዲስ ደብዳቤ'; }
+    function saveDraftLocally() { const draft = { recipient:document.getElementById('recipient').value, subject:document.getElementById('subject').value, type:document.getElementById('type').value, category:document.getElementById('category').value, department:document.getElementById('department').value, status:document.getElementById('status').value, description:document.getElementById('description').value, attachment:document.getElementById('attachmentName').value }; localStorage.setItem('letter_draft', JSON.stringify(draft)); showToast("Draft saved"); }
+    function loadDraft() { const d = localStorage.getItem('letter_draft'); if(d){ const dr=JSON.parse(d); document.getElementById('recipient').value=dr.recipient||''; document.getElementById('subject').value=dr.subject||''; document.getElementById('type').value=dr.type||'Outgoing'; document.getElementById('category').value=dr.category||'Official'; document.getElementById('department').value=dr.department||'HR'; document.getElementById('status').value=dr.status||'Draft'; document.getElementById('description').value=dr.description||''; document.getElementById('attachmentName').value=dr.attachment||''; } }
+    function renderTemplates() { const search = document.getElementById('searchTemplates')?.value.toLowerCase() || ''; const filtered = templates.filter(t => t.name.toLowerCase().includes(search) || t.category.toLowerCase().includes(search)); const grid = document.getElementById('templatesGrid'); if(!grid) return; if(filtered.length===0){ grid.innerHTML = '<div class="card" style="text-align:center;padding:40px;">✨ No templates found</div>'; return; } grid.innerHTML = filtered.map(t => `<div class="template-card"><div class="template-title"><i class="fas fa-file-contract" style="color:#1e6f4c;"></i> ${escapeHtml(t.name)}</div><div><span class="template-category">${t.category}</span></div><div class="template-preview">${escapeHtml(t.content.substring(0,100))}...</div><div class="template-actions"><button class="btn-secondary preview-template" data-id="${t.id}"><i class="fas fa-eye"></i> Preview</button><button class="btn-primary use-template" data-id="${t.id}"><i class="fas fa-pen-fancy"></i> Use Template</button></div></div>`).join(''); document.querySelectorAll('.preview-template').forEach(btn => btn.addEventListener('click', (e) => { const id = parseInt(btn.dataset.id); const tmpl = templates.find(t=>t.id===id); alert(`📄 Template: ${tmpl.name}\n\n${tmpl.content}`); })); document.querySelectorAll('.use-template').forEach(btn => btn.addEventListener('click', (e) => { const id = parseInt(btn.dataset.id); const tmpl = templates.find(t=>t.id===id); if(tmpl){ document.getElementById('description').value = tmpl.content; document.getElementById('subject').value = tmpl.name; switchView('create'); showToast(`Template "${tmpl.name}" loaded`); } })); }
+    function addNewTemplate() { let name = prompt("Template name:"); if(name){ let content = prompt("Template content:"); if(content){ templates.push({id:Date.now(), name, category:"Custom", content}); saveTemplates(); renderTemplates(); showToast("Template added"); } } }
+    function switchView(view) { currentView = view; document.getElementById('dashboardView').classList.remove('active-view'); document.getElementById('createView').classList.remove('active-view'); document.getElementById('templatesView').classList.remove('active-view'); if(view === 'dashboard') document.getElementById('dashboardView').classList.add('active-view'); else if(view === 'create') { document.getElementById('createView').classList.add('active-view'); loadDraft(); } else if(view === 'templates') { document.getElementById('templatesView').classList.add('active-view'); renderTemplates(); } document.querySelectorAll('#globalNav a').forEach(a => a.classList.remove('active')); if(view === 'dashboard') document.querySelector('#globalNav a[data-view="dashboard"]').classList.add('active'); else if(view === 'create') document.querySelector('#globalNav a[data-view="create"]').classList.add('active'); else if(view === 'templates') document.querySelector('#globalNav a[data-view="templates"]').classList.add('active'); if(view === 'dashboard') renderDashboard(); }
+    // Language & Dark Mode
+    const langMap = { en: { dashTitle:"📄 Letter Dashboard", statTotal:"Total Letters", statPending:"Pending", statArchived:"Archived", formTitle:"✍️ Compose Letter", recipient:"Recipient / To", subject:"Subject / Title", type:"Letter Type", category:"Category", department:"Department", status:"Status", description:"Description / Content", attachment:"Attachment (filename)", cancel:"Cancel", saveDraft:"Save Draft", submit:"Submit Letter", templatesTitle:"📚 Letter Templates", addTemplate:"New Template", id:"ID", subjectCol:"Subject", descCol:"Description", dateCol:"Date & Time", typeCol:"Type", attachCol:"Attachment", statusCol:"Status", actionsCol:"Actions" }, am: { dashTitle:"📄 የደብዳቤ መረጃ", statTotal:"ጠቅላላ ደብዳቤዎች", statPending:"በመጠባበቅ ላይ", statArchived:"በማህደር ውስጥ", formTitle:"አዲስ ደብዳቤ", recipient:"ተቀባይ/ለ", subject:"ርዕስ", type:"አይነት", category:"ምድብ", department:"ክፍል", status:"ሁኔታ", description:"ይዘት", attachment:"አባሪ ፋይል", cancel:"ሰርዝ", saveDraft:"ረቂቅ አስቀምጥ", submit:"አስገባ", templatesTitle:"የአብነት ቤተ-መጻሕፍት", addTemplate:"አዲስ አብነት", id:"መታወቂያ", subjectCol:"ርዕስ", descCol:"መግለጫ", dateCol:"ቀን እና ሰዓት", typeCol:"አይነት", attachCol:"አባሪ", statusCol:"ሁኔታ", actionsCol:"ድርጊቶች" } };
+    function applyLanguage() { const t = langMap[currentLang]; document.getElementById('dashTitle').innerText = t.dashTitle; document.getElementById('statTotalLabel').innerText = t.statTotal; document.getElementById('statPendingLabel').innerText = t.statPending; document.getElementById('statArchivedLabel').innerText = t.statArchived; document.getElementById('formTitle').innerText = (editLetterId && currentView==='create') ? (currentLang==='en'?'✏️ Edit Letter':'ደብዳቤ አርትዕ') : t.formTitle; document.getElementById('lblRecipient').innerText = t.recipient; document.getElementById('lblSubject').innerText = t.subject; document.getElementById('lblType').innerText = t.type; document.getElementById('lblCategory').innerText = t.category; document.getElementById('lblDepartment').innerText = t.department; document.getElementById('lblStatus').innerText = t.status; document.getElementById('lblDescription').innerText = t.description; document.getElementById('lblAttachment').innerText = t.attachment; document.getElementById('cancelTxt').innerText = t.cancel; document.getElementById('saveDraftTxt').innerText = t.saveDraft; document.getElementById('submitTxt').innerText = t.submit; document.getElementById('templatesTitle').innerText = t.templatesTitle; document.getElementById('addTemplateTxt').innerText = t.addTemplate; const headersRow = document.getElementById('tableHeaders'); if(headersRow) headersRow.innerHTML = `<th data-sort="id">${t.id} <i class="fas fa-sort"></i></th><th data-sort="subject">${t.subjectCol}</th><th data-sort="description">${t.descCol}</th><th data-sort="date">${t.dateCol}</th><th data-sort="type">${t.typeCol}</th><th>${t.attachCol}</th><th data-sort="status">${t.statusCol}</th><th>${t.actionsCol}</th>`; if(currentView === 'dashboard') renderDashboard(); }
+    function init() { loadData(); const years = [...new Set(letters.map(l=>l.date.substring(0,4)))]; const cats = [...new Set(letters.map(l=>l.category))]; const depts = [...new Set(letters.map(l=>l.dept))]; cats.forEach(c=>{let opt=document.createElement('option');opt.value=c;opt.text=c;document.getElementById('categoryFilter').appendChild(opt);}); depts.forEach(d=>{let opt=document.createElement('option');opt.value=d;opt.text=d;document.getElementById('deptFilter').appendChild(opt);}); years.forEach(y=>{let opt=document.createElement('option');opt.value=y;opt.text=y;document.getElementById('yearFilter').appendChild(opt);}); document.getElementById('yearFilter').addEventListener('change',e=>{currentYear=e.target.value;currentPage=1;renderDashboard();}); document.getElementById('categoryFilter').addEventListener('change',e=>{currentCategory=e.target.value;currentPage=1;renderDashboard();}); document.getElementById('deptFilter').addEventListener('change',e=>{currentDept=e.target.value;currentPage=1;renderDashboard();}); document.getElementById('searchInput').addEventListener('input',e=>{currentSearch=e.target.value;currentPage=1;renderDashboard();}); document.querySelectorAll('#globalNav a').forEach(a=>{a.addEventListener('click',()=>{if(a.dataset.view) switchView(a.dataset.view); else if(a.dataset.memo==='memo') alert("📝 Memo section (coming soon)");});}); document.getElementById('createFromDashboardBtn').addEventListener('click',()=>{resetCreateForm(); switchView('create');}); document.getElementById('cancelCreateBtn').addEventListener('click',()=>{if(confirm("Clear form?"))resetCreateForm(); switchView('dashboard');}); document.getElementById('saveDraftBtn').addEventListener('click',saveDraftLocally); document.getElementById('submitLetterBtn').addEventListener('click',submitLetterFromForm); document.getElementById('addTemplateBtn').addEventListener('click',addNewTemplate); document.getElementById('searchTemplates').addEventListener('input',()=>renderTemplates()); document.getElementById('notifyBell').addEventListener('click',()=>alert(`🔔 ${letters.filter(l=>l.status==='Pending').length} pending letters`)); document.getElementById('closeModalBtn').addEventListener('click',()=>document.getElementById('fileModal').style.display='none'); window.addEventListener('click',e=>{if(e.target===document.getElementById('fileModal')) document.getElementById('fileModal').style.display='none';}); document.getElementById('darkModeToggle').addEventListener('click',()=>{document.body.classList.toggle('dark-mode'); const icon=document.querySelector('#darkModeToggle i'); if(document.body.classList.contains('dark-mode')) icon.classList.replace('fa-moon','fa-sun'); else icon.classList.replace('fa-sun','fa-moon'); localStorage.setItem('darkMode',document.body.classList.contains('dark-mode'));}); if(localStorage.getItem('darkMode')==='true') document.body.classList.add('dark-mode'); document.querySelectorAll('.lang-btn').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); currentLang=btn.dataset.lang; applyLanguage();})); applyLanguage(); switchView('dashboard'); }
+    function openFileModal(fileName) { document.getElementById('modalFileName').innerHTML = `<strong>File:</strong> ${escapeHtml(fileName)}`; document.getElementById('fileModal').style.display = 'flex'; }
+    init();
+</script>
+</body>
+</html>

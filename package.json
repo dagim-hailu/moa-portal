@@ -1,0 +1,25 @@
+{
+  "name": "moa-portal",
+  "private": true,
+  "packageManager": "pnpm@9.12.1",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "db:migrate": "pnpm --filter @moa/shared db:migrate",
+    "db:seed": "pnpm --filter @moa/shared db:seed",
+    "db:migrate:docker": "docker exec -i docker-postgres-1 psql -U moa -d moa_portal < packages/shared/drizzle/0000_init.sql",
+    "db:seed:docker": "docker exec -i docker-postgres-1 psql -U moa -d moa_portal < packages/shared/drizzle/0001_seed.sql",
+    "stack:up": "docker compose -f infrastructure/docker/docker-compose.yml --profile dev up -d postgres && sleep 4 && pnpm db:migrate:docker && pnpm db:seed:docker && docker compose -f infrastructure/docker/docker-compose.yml --profile dev up -d server-dev shell-dev",
+    "stack:down": "docker compose -f infrastructure/docker/docker-compose.yml --profile dev down"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.1",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "fork-ts-checker-webpack-plugin": "^9.1.0"
+  }
+}

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Reports Dashboard | Planning & Intelligence</title>
+    <!-- Google Fonts + Chart.js + Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f5faff;
+            font-family: 'Inter', sans-serif;
+            color: #1f2b48;
+            padding: 32px 28px;
+        }
+
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* modern card style */
+        .card {
+            background: #ffffff;
+            border-radius: 28px;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.02), 0 2px 6px rgba(0, 0, 0, 0.03);
+            border: 1px solid #eef2fa;
+            transition: all 0.2s ease;
+        }
+
+        /* header */
+        .reports-header {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-bottom: 28px;
+            gap: 18px;
+        }
+        .title-section h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            background: linear-gradient(145deg, #1f4e3c, #2b7a58);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .title-section p { color: #5c6f87; font-size: 0.85rem; margin-top: 6px; }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: center;
+            background: white;
+            padding: 8px 18px;
+            border-radius: 60px;
+            border: 1px solid #eef3fc;
+        }
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8fafd;
+            padding: 6px 16px;
+            border-radius: 40px;
+        }
+        .filter-item select, .filter-item input {
+            border: none;
+            background: transparent;
+            font-weight: 500;
+            padding: 6px 4px;
+            font-family: 'Inter';
+            outline: none;
+        }
+        .action-btns {
+            display: flex;
+            gap: 12px;
+        }
+        .btn-outline {
+            background: white;
+            border: 1px solid #dce5ef;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-outline i { margin-right: 6px; }
+        .btn-outline:hover { background: #eef2fc; border-color: #bdd4e8; }
+
+        /* KPI cards grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 22px;
+            margin-bottom: 36px;
+        }
+        .kpi-card {
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 20px 28px -12px rgba(0, 0, 0, 0.08); }
+        .kpi-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .kpi-icon {
+            width: 46px;
+            height: 46px;
+            background: #eef6fe;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: #2b7a58;
+        }
+        .trend { font-size: 0.7rem; font-weight: 700; background: #eef2f0; padding: 4px 8px; border-radius: 20px; }
+        .kpi-value { font-size: 2rem; font-weight: 800; margin: 8px 0 4px; letter-spacing: -0.5px; }
+        .kpi-label { color: #5e6f8c; font-weight: 500; font-size: 0.85rem; }
+
+        /* charts row */
+        .charts-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 36px;
+        }
+        .chart-card {
+            flex: 1 1 300px;
+            padding: 20px;
+        }
+        .chart-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; gap: 8px; align-items: center; }
+        canvas { max-height: 240px; width: 100% !important; }
+
+        /* table section */
+        .table-section {
+            margin: 32px 0 28px;
+            padding: 0 0 8px 0;
+            overflow-x: auto;
+        }
+        .table-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            gap: 16px;
+        }
+        .search-wrapper {
+            background: white;
+            border: 1px solid #e2edf7;
+            border-radius: 48px;
+            padding: 6px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .search-wrapper input {
+            border: none;
+            background: transparent;
+            padding: 8px 0;
+            width: 220px;
+            outline: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            text-align: left;
+            padding: 18px 12px;
+            background: #f9fbfe;
+            border-bottom: 1px solid #eef2f8;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+        }
+        td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #f1f5fb;
+            font-size: 0.85rem;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+        .status-green { background: #e4f5ea; color: #1f6e43; }
+        .status-yellow { background: #fff1df; color: #c47a2e; }
+        .status-red { background: #ffe6e5; color: #bc3f33; }
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .page-btn {
+            background: white;
+            border: 1px solid #dee6ef;
+            padding: 8px 14px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+        .active-page { background: #1f6e43; color: white; border-color: #1f6e43; }
+
+        /* insights + remarks */
+        .insight-remark-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-top: 40px;
+        }
+        .insights-card {
+            flex: 1.5;
+            padding: 24px;
+        }
+        .remarks-card {
+            flex: 1;
+            padding: 24px;
+        }
+        .insight-item {
+            display: flex;
+            gap: 14px;
+            margin: 20px 0;
+            align-items: flex-start;
+        }
+        textarea {
+            width: 100%;
+            border-radius: 24px;
+            border: 1px solid #e2edf7;
+            padding: 16px;
+            font-family: 'Inter';
+            margin: 12px 0;
+            resize: vertical;
+        }
+        .save-remark {
+            background: #1f6e43;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 10px 18px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .tooltip-icon {
+            border-bottom: 1px dashed #98aec5;
+            cursor: help;
+        }
+        footer { text-align: center; margin-top: 48px; font-size: 0.7rem; color: #8ba0bc; }
+
+        @media (max-width: 780px) {
+            body { padding: 20px; }
+            .filter-bar { border-radius: 28px; background: transparent; flex-wrap: wrap; }
+        }
+        .skeleton { background: linear-gradient(90deg, #f0f3f8 25%, #e9eef4 50%, #f0f3f8 75%); background-size: 200% 100%; animation: loading 1.2s infinite; border-radius: 12px; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- HEADER SECTION -->
+    <div class="reports-header">
+        <div class="title-section">
+            <h1><i class="fas fa-chart-line" style="margin-right: 8px; color:#1f6e43;"></i> Reports Dashboard</h1>
+            <p>Consolidated performance & planning intelligence</p>
+        </div>
+        <div class="filter-bar">
+            <div class="filter-item"><i class="fas fa-calendar-alt"></i><select id="budgetYearFilter"><option>2024</option><option>2025</option><option>2026</option></select></div>
+            <div class="filter-item"><i class="fas fa-chart-simple"></i><select id="quarterFilter"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
+            <div class="filter-item"><i class="fas fa-building"></i><select id="deptFilter"><option>All Departments</option><option>Agriculture</option><option>Infrastructure</option><option>Education</option></select></div>
+            <div class="action-btns">
+                <button class="btn-outline" id="exportBtn"><i class="fas fa-download"></i> Export (PDF/Excel)</button>
+                <button class="btn-outline" id="printBtn"><i class="fas fa-print"></i> Print</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI CARDS (summary) -->
+    <div class="kpi-grid" id="kpiContainer"></div>
+
+    <!-- CHARTS SECTION -->
+    <div class="charts-row">
+        <div class="card chart-card"><h3><i class="fas fa-chart-line" style="color:#2b7a58;"></i> Progress over time</h3><canvas id="lineChart"></canvas></div>
+        <div class="card chart-card"><h3><i class="fas fa-chart-simple"></i> Quarterly performance</h3><canvas id="barChart"></canvas></div>
+        <div class="card chart-card"><h3><i class="fas fa-chart-pie"></i> KPI completion</h3><canvas id="donutChart"></canvas></div>
+    </div>
+
+    <!-- DETAILED REPORT TABLE with search/sort/pagination -->
+    <div class="card table-section">
+        <div class="table-toolbar">
+            <div class="search-wrapper"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Search by plan or KPI..."></div>
+            <div><span class="tooltip-icon" title="Click on column headers to sort">🔍 Sortable table</span></div>
+        </div>
+        <div style="overflow-x: auto;">
+            <table id="reportTable">
+                <thead>
+                    <tr><th data-sort="plan">Plan Name <i class="fas fa-arrow-up-wide-short"></i></th><th data-sort="kpi">KPI</th><th data-sort="target">Target</th><th data-sort="actual">Actual</th><th data-sort="variance">Variance</th><th data-sort="status">Status</th></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="paginationControls"></div>
+    </div>
+
+    <!-- INSIGHTS & REMARKS SECTION -->
+    <div class="insight-remark-row">
+        <div class="card insights-card">
+            <h3><i class="fas fa-lightbulb" style="color:#e6a017;"></i> Key insights & recommendations</h3>
+            <div id="insightsList"></div>
+        </div>
+        <div class="card remarks-card">
+            <h3><i class="fas fa-comment-dots"></i> Remarks & analysis</h3>
+            <textarea id="remarksText" rows="4" placeholder="Add quarterly commentary, risk notes or recommendations..."></textarea>
+            <button class="save-remark" id="saveRemarksBtn"><i class="fas fa-save"></i> Save remarks</button>
+        </div>
+    </div>
+    <footer>Data refreshed automatically | Planning & Reporting Intelligence</footer>
+</div>
+
+<script>
+    // -------------------- MOCK DATASETS --------------------
+    let fullReportData = [
+        { plan: "Green Legacy Initiative", kpi: "Tree seedlings planted", target: "500M", actual: "475M", variance: "-5%", status: "on-track" },
+        { plan: "Digital Agriculture", kpi: "Farmers registered", target: "2.5M", actual: "2.1M", variance: "-16%", status: "at-risk" },
+        { plan: "Irrigation Expansion", kpi: "Hectares irrigated", target: "120k", actual: "98k", variance: "-18.3%", status: "delayed" },
+        { plan: "Market linkage", kpi: "Cooperatives supported", target: "850", actual: "890", variance: "+4.7%", status: "on-track" },
+        { plan: "Post-harvest tech", kpi: "Loss reduction %", target: "15%", actual: "12.5%", variance: "-2.5%", status: "at-risk" },
+        { plan: "Soil Health Program", kpi: "Soil tests completed", target: "30k", actual: "34k", variance: "+13%", status: "on-track" },
+        { plan: "Youth Agri-Entrepreneur", kpi: "New ventures", target: "400", actual: "320", variance: "-20%", status: "delayed" },
+        { plan: "Climate Resilience", kpi: "Early warning systems", target: "12", actual: "9", variance: "-25%", status: "delayed" }
+    ];
+
+    let currentPage = 1;
+    let rowsPerPage = 5;
+    let currentSort = { column: "plan", direction: "asc" };
+    let searchTerm = "";
+
+    // KPI summary data ( dynamic based on filters, but static mock )
+    const summaryKPIs = {
+        totalPlans: { value: 24, trend: "+3", icon: "fa-folder-open" },
+        completedKpis: { value: 18, trend: "+12%", icon: "fa-check-circle" },
+        ongoingActivities: { value: 11, trend: "steady", icon: "fa-play-circle" },
+        delayedTasks: { value: 5, trend: "+2", icon: "fa-exclamation-triangle", color: "#e67e22" },
+        overallScore: { value: "78%", trend: "+5%", icon: "fa-chart-line" }
+    };
+
+    function renderKPICards() {
+        const container = document.getElementById('kpiContainer');
+        const kpis = [
+            { label: "Total Plans", key: "totalPlans", icon: "fa-folder-open", color: "#2b7a58" },
+            { label: "Completed KPIs", key: "completedKpis", icon: "fa-check-circle", color: "#3b82f6" },
+            { label: "Ongoing Activities", key: "ongoingActivities", icon: "fa-play-circle", color: "#8b5cf6" },
+            { label: "Delayed Tasks", key: "delayedTasks", icon: "fa-exclamation-triangle", color: "#e67e22" },
+            { label: "Performance Score", key: "overallScore", icon: "fa-chart-line", color: "#1f6e43" }
+        ];
+        container.innerHTML = kpis.map(k => {
+            let data = summaryKPIs[k.key];
+            let value = data.value;
+            let trend = data.trend;
+            let trendIcon = trend.includes('+') ? 'fa-arrow-up' : (trend === 'steady' ? 'fa-minus' : 'fa-arrow-down');
+            let trendColor = trend.includes('+') || trend === 'steady' ? '#2c9f6e' : '#e26d5c';
+            return `
+                <div class="card kpi-card">
+                    <div class="kpi-top"><div class="kpi-icon" style="background:#eef2fa; color:${k.color}"><i class="fas ${k.icon}"></i></div><span class="trend" style="color:${trendColor}"><i class="fas ${trendIcon}"></i> ${trend}</span></div>
+                    <div class="kpi-value">${value}</div>
+                    <div class="kpi-label">${k.label}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Table render with filter + sort + pagination
+    function getFilteredSortedData() {
+        let filtered = fullReportData.filter(row => 
+            row.plan.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            row.kpi.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        // sort
+        filtered.sort((a,b) => {
+            let aVal = a[currentSort.column];
+            let bVal = b[currentSort.column];
+            if(currentSort.column === 'variance') {
+                let aNum = parseFloat(aVal) || 0;
+                let bNum = parseFloat(bVal) || 0;
+                return currentSort.direction === 'asc' ? aNum - bNum : bNum - aNum;
+            }
+            if(currentSort.column === 'status') {
+                let order = { 'on-track':1, 'at-risk':2, 'delayed':3 };
+                return currentSort.direction === 'asc' ? (order[aVal]||0) - (order[bVal]||0) : (order[bVal]||0) - (order[aVal]||0);
+            }
+            if(typeof aVal === 'string' && typeof bVal === 'string') {
+                return currentSort.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            }
+            return 0;
+        });
+        return filtered;
+    }
+
+    function renderTableBody() {
+        const filtered = getFilteredSortedData();
+        const start = (currentPage-1)*rowsPerPage;
+        const paginated = filtered.slice(start, start+rowsPerPage);
+        const tbody = document.getElementById('tableBody');
+        if(paginated.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">No matching records</td></tr>';
+            document.getElementById('paginationControls').innerHTML = '';
+            return;
+        }
+        tbody.innerHTML = paginated.map(row => {
+            let statusClass = row.status === 'on-track' ? 'status-green' : (row.status === 'at-risk' ? 'status-yellow' : 'status-red');
+            let statusText = row.status === 'on-track' ? 'On track' : (row.status === 'at-risk' ? 'At risk' : 'Delayed');
+            let varianceClass = row.variance.startsWith('+') ? 'status-green' : (row.variance.includes('-') ? 'status-red' : '');
+            return `<tr>
+                <td><strong>${escapeHtml(row.plan)}</strong></td>
+                <td>${escapeHtml(row.kpi)}</td>
+                <td>${row.target}</td>
+                <td>${row.actual}</td>
+                <td class="${varianceClass}" style="font-weight:500;">${row.variance}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            </tr>`;
+        }).join('');
+        // pagination controls
+        const totalPages = Math.ceil(filtered.length / rowsPerPage);
+        let paginationHtml = `<button class="page-btn" data-page="prev" ${currentPage===1 ? 'disabled' : ''}>Prev</button>`;
+        for(let i=1;i<=totalPages;i++) {
+            paginationHtml += `<button class="page-btn ${i===currentPage ? 'active-page' : ''}" data-page="${i}">${i}</button>`;
+        }
+        paginationHtml += `<button class="page-btn" data-page="next" ${currentPage===totalPages||totalPages===0 ? 'disabled' : ''}>Next</button>`;
+        document.getElementById('paginationControls').innerHTML = paginationHtml;
+        document.querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                let pg = btn.dataset.page;
+                if(pg === 'prev' && currentPage>1) currentPage--;
+                else if(pg === 'next' && currentPage<totalPages) currentPage++;
+                else if(!isNaN(pg)) currentPage = parseInt(pg);
+                renderTableBody();
+            });
+        });
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    // Sorting listeners
+    function initSorting() {
+        document.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.getAttribute('data-sort');
+                if(currentSort.column === col) {
+                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.column = col;
+                    currentSort.direction = 'asc';
+                }
+                currentPage = 1;
+                renderTableBody();
+            });
+        });
+    }
+
+    // CHARTS INITIALIZATION
+    let lineChart, barChart, donutChart;
+    function initCharts() {
+        const ctxLine = document.getElementById('lineChart').getContext('2d');
+        const ctxBar = document.getElementById('barChart').getContext('2d');
+        const ctxDonut = document.getElementById('donutChart').getContext('2d');
+        lineChart = new Chart(ctxLine, { type: 'line', data: { labels: ['Jan','Feb','Mar','Apr','May','Jun'], datasets: [{ label: 'Overall KPI Achievement %', data: [62,68,73,79,84,89], borderColor: '#2b7a58', backgroundColor: 'rgba(43,122,88,0.05)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw}%` } } } } });
+        barChart = new Chart(ctxBar, { type: 'bar', data: { labels: ['Q1','Q2','Q3','Q4'], datasets: [{ label: 'Performance Score', data: [72, 78, 83, 88], backgroundColor: ['#2b7a58','#4c9f70','#9ac184','#eab354'], borderRadius: 8 }] }, options: { responsive: true } });
+        donutChart = new Chart(ctxDonut, { type: 'doughnut', data: { labels: ['On Track (68%)', 'At Risk (18%)', 'Delayed (14%)'], datasets: [{ data: [68,18,14], backgroundColor: ['#1f6e43','#f4b942','#e4684d'], borderWidth: 0 }] }, options: { cutout: '60%', plugins: { legend: { position: 'bottom' } } } });
+    }
+    function updateChartsWithFilters() { /* mock simulate filter change */ }
+
+    // INSIGHTS Dynamic
+    function renderInsights() {
+        const insightsDiv = document.getElementById('insightsList');
+        insightsDiv.innerHTML = `
+            <div class="insight-item"><i class="fas fa-check-circle" style="color:#1f6e43; font-size:1.5rem;"></i><div><strong>✅ Key achievement:</strong> 4 plans exceeded Q3 targets with +12% average variance.</div></div>
+            <div class="insight-item"><i class="fas fa-exclamation-triangle" style="color:#e6a017;"></i><div><strong>⚠️ Risk alert:</strong> Irrigation expansion delayed by 18% due to supply chain gaps. Mitigation: expedite procurement.</div></div>
+            <div class="insight-item"><i class="fas fa-chart-simple" style="color:#3b82f6;"></i><div><strong>📈 Recommendation:</strong> Reallocate resources to at-risk KPI 'Digital Agriculture' to meet Q4 targets.</div></div>
+            <div class="insight-item"><i class="fas fa-calendar-week"></i><div><strong>⏱️ Upcoming deadlines:</strong> Q4 reports due Dec 20, Annual plan submission Jan 10.</div></div>
+        `;
+    }
+
+    // Event listeners
+    document.getElementById('exportBtn').addEventListener('click', () => alert('📎 Export simulation: CSV/PDF export ready (integrate with backend).'));
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+    document.getElementById('searchInput').addEventListener('input', (e) => { searchTerm = e.target.value; currentPage=1; renderTableBody(); });
+    document.getElementById('budgetYearFilter').addEventListener('change', () => showToast('Filter updated: data sync mock'));
+    document.getElementById('quarterFilter').addEventListener('change', () => showToast('Quarter changed - charts refreshed (demo)'));
+    document.getElementById('saveRemarksBtn').addEventListener('click', () => { localStorage.setItem('reportRemarks', document.getElementById('remarksText').value); showToast('Remarks saved successfully'); });
+    function showToast(msg) { alert(msg); } // simpler, but matches style
+    // load saved remarks
+    const savedRem = localStorage.getItem('reportRemarks');
+    if(savedRem) document.getElementById('remarksText').value = savedRem;
+
+    // skeleton simulation - removing concept but fully loaded
+    function init() {
+        renderKPICards();
+        renderTableBody();
+        initSorting();
+        initCharts();
+        renderInsights();
+    }
+    init();
+    // tooltip manual (title attributes added)
+    document.querySelectorAll('.tooltip-icon, .kpi-card, .chart-card').forEach(el => el.setAttribute('data-tip','hover info'));
+    // add hover info for cool
+</script>
+</body>
+</html>

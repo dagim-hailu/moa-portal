@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>MOA | Sustainable Future</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* --- THEME VARIABLES (same robust styling) --- */
+        :root {
+            --primary-green: #2ea354;
+            --primary-hover: #228241;
+            --accent-green: #89a87d;
+            --bg-main: #fcfcfc;
+            --bg-secondary: #f3f6f3;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --card-bg: #ffffff;
+            --nav-bg: rgba(255, 255, 255, 0.85);
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.05);
+            --shadow-md: 0 10px 30px rgba(0,0,0,0.08);
+            --shadow-lg: 0 20px 40px rgba(0,0,0,0.12);
+            --modal-overlay: rgba(15, 23, 42, 0.4);
+            --transition-speed: 0.3s;
+        }
+
+        [data-theme="dark"] {
+            --primary-green: #34d399;
+            --primary-hover: #10b981;
+            --accent-green: #4ade80;
+            --bg-main: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --card-bg: #1e293b;
+            --nav-bg: rgba(15, 23, 42, 0.85);
+            --border-color: #334155;
+            --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.2);
+            --shadow-md: 0 10px 30px rgba(0,0,0,0.4);
+            --shadow-lg: 0 20px 40px rgba(0,0,0,0.6);
+            --modal-overlay: rgba(0, 0, 0, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color var(--transition-speed), color var(--transition-speed), border-color var(--transition-speed);
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-up { animation: fadeInUp 0.8s ease-out forwards; }
+        
+        .scroll-hidden {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .scroll-visible { opacity: 1; transform: translateY(0); }
+
+        /* --- NAVIGATION --- */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 8%;
+            background: var(--nav-bg);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .logo-text { font-weight: 800; font-size: 1.4rem; color: var(--primary-green); letter-spacing: -0.5px; }
+
+        .hamburger {
+            font-size: 1.3rem; color: var(--text-main); cursor: pointer;
+            padding: 8px; border-radius: 8px; background: var(--bg-secondary);
+            transition: transform 0.2s;
+        }
+        .hamburger:hover { transform: scale(1.05); color: var(--primary-green); }
+
+        .nav-links { display: flex; gap: 35px; list-style: none; }
+        .nav-links a { text-decoration: none; color: var(--text-muted); font-weight: 600; font-size: 0.95rem; }
+        .nav-links a:hover { color: var(--primary-green); }
+
+        .nav-right { display: flex; align-items: center; gap: 15px; }
+
+        .icon-btn {
+            width: 42px; height: 42px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; cursor: pointer;
+            border: 1px solid var(--border-color); background: var(--card-bg);
+            color: var(--text-main); position: relative;
+        }
+        .icon-btn:hover { border-color: var(--primary-green); color: var(--primary-green); }
+
+        .profile-icon { background: var(--primary-green); color: white; border: none; }
+        .profile-icon:hover { background: var(--primary-hover); color: white; }
+
+        .notification-dot {
+            position: absolute;
+            top: 10px; right: 12px;
+            width: 8px; height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            box-shadow: 0 0 0 2px var(--card-bg);
+        }
+
+        /* --- PROFILE DROPDOWN --- */
+        .profile-wrapper { position: relative; }
+        .profile-dropdown {
+            position: absolute;
+            top: 55px; right: 0;
+            width: 260px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            padding: 10px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+        .profile-dropdown.active {
+            opacity: 1; visibility: visible; transform: translateY(0);
+        }
+        .profile-header { padding: 15px; text-align: center; }
+        .profile-header h4 { font-size: 1.1rem; color: var(--text-main); margin-bottom: 4px; }
+        .profile-header p { font-size: 0.85rem; color: var(--text-muted); }
+        .profile-dropdown hr { border: none; border-top: 1px solid var(--border-color); margin: 5px 0; }
+        .profile-dropdown a {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 15px; text-decoration: none;
+            color: var(--text-main); font-size: 0.95rem; font-weight: 500;
+            border-radius: 12px; transition: 0.2s;
+        }
+        .profile-dropdown a i { width: 20px; text-align: center; color: var(--text-muted); }
+        .profile-dropdown a:hover { background: var(--bg-secondary); color: var(--primary-green); }
+        .profile-dropdown a:hover i { color: var(--primary-green); }
+        .logout-link { color: #ef4444 !important; }
+        .logout-link i { color: #ef4444 !important; }
+        .logout-link:hover { background: rgba(239, 68, 68, 0.1) !important; }
+
+        /* --- HERO SECTION --- */
+        .hero { padding: 30px 5%; }
+        .hero-container {
+            position: relative; height: 600px; border-radius: 32px; overflow: visible; 
+            display: flex; align-items: center; padding: 0 8%;
+            background: linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 100%),
+                        url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=2000') no-repeat center/cover;
+            box-shadow: var(--shadow-lg);
+        }
+        .hero-content { color: #ffffff; max-width: 650px; z-index: 2; }
+        .hero-content h1 { font-size: 4rem; line-height: 1.1; margin-bottom: 20px; font-weight: 800; letter-spacing: -1px; }
+        .hero-content p { font-size: 1.15rem; margin-bottom: 35px; opacity: 0.9; font-weight: 400; }
+
+        .btn-main {
+            padding: 16px 36px; background: var(--primary-green); color: #fff;
+            border: none; border-radius: 100px; cursor: pointer;
+            font-weight: 600; font-size: 1rem; box-shadow: 0 10px 20px rgba(46, 163, 84, 0.3);
+        }
+        .btn-main:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 15px 25px rgba(46, 163, 84, 0.4); }
+
+        /* --- SEARCH BAR PILL --- */
+        .search-pill {
+            position: absolute; bottom: -40px; left: 10%; transform: translateX(-50%);
+            background: var(--card-bg); width: 85%; max-width: 900px; padding: 15px 25px;
+            border-radius: 100px; box-shadow: var(--shadow-lg);
+            display: flex; justify-content: space-between; align-items: center; gap: 15px;
+            border: 1px solid var(--border-color); z-index: 10;
+        }
+        .search-item { flex: 1; padding: 0 15px; border-right: 1px solid var(--border-color); }
+        .search-item:last-of-type { border-right: none; }
+        .search-item label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
+        .search-item input { border: none; outline: none; width: 100%; font-weight: 600; font-size: 1rem; background: transparent; color: var(--text-main); }
+        .search-item input::placeholder { color: var(--text-muted); font-weight: 400; }
+
+        /* --- INFO SECTION --- */
+        .info-section { margin-top: 100px; padding: 80px 8%; display: flex; gap: 60px; align-items: center; }
+        .info-img { flex: 1; position: relative; }
+        .info-img img { width: 100%; border-radius: 32px; box-shadow: var(--shadow-lg); transition: transform var(--transition-speed); }
+        .info-img img:hover { transform: scale(1.02); }
+        .info-text { flex: 1; }
+        .info-text h2 { font-size: 2.8rem; color: var(--text-main); margin-bottom: 20px; line-height: 1.2; font-weight: 800; }
+        .info-text h2 span { color: var(--primary-green); }
+        .info-text p { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 30px; }
+
+        /* --- GRID CARDS --- */
+        .grid-section { padding: 80px 8%; background: var(--bg-secondary); text-align: center; }
+        .grid-section h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 50px; color: var(--text-main); }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 40px; }
+        .card {
+            background: var(--card-bg); padding: 20px; border-radius: 24px;
+            border: 1px solid var(--border-color); box-shadow: var(--shadow-md);
+            text-align: left; transition: transform 0.4s ease, box-shadow 0.4s ease;
+        }
+        .card:hover { transform: translateY(-12px); box-shadow: var(--shadow-lg); border-color: var(--primary-green); }
+        .card img { width: 100%; height: 240px; object-fit: cover; border-radius: 16px; margin-bottom: 20px; }
+        .card h3 { font-size: 1.4rem; margin-bottom: 12px; color: var(--text-main); }
+        .card p { color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem; }
+        .btn-card {
+            padding: 12px 24px; background: transparent; border: 2px solid var(--border-color);
+            color: var(--text-main); border-radius: 100px; cursor: pointer; font-weight: 600;
+        }
+        .card:hover .btn-card { background: var(--primary-green); border-color: var(--primary-green); color: #fff; }
+
+        /* --- MODAL (FIXED GRID NAVIGATION WITH CLEAN LINKS) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--modal-overlay); backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center;
+            z-index: 2000; opacity: 0; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-content {
+            background: var(--card-bg); width: 95%; max-width: 1100px; height: 85vh;
+            border-radius: 32px; display: flex; overflow: hidden; position: relative;
+            box-shadow: var(--shadow-lg); transform: scale(0.95); transition: transform 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .close-btn {
+            position: absolute; top: 25px; right: 25px; cursor: pointer;
+            background: var(--bg-secondary); color: var(--text-main);
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; font-size: 1.2rem; z-index: 10;
+        }
+        .close-btn:hover { background: #ef4444; color: white; }
+        .menu-grid { flex: 1.6; padding: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 20px; overflow-y: auto; background: var(--bg-main); }
+        .grid-item {
+            background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px;
+            transition: all 0.25s ease; cursor: pointer;
+        }
+        .grid-item a {
+            text-decoration: none; display: flex; flex-direction: column; align-items: center;
+            gap: 12px; padding: 20px 15px; width: 100%; height: 100%;
+            color: inherit;
+        }
+        .grid-item:hover { border-color: var(--primary-green); transform: translateY(-5px); box-shadow: var(--shadow-sm); }
+        .grid-item i { font-size: 2rem; color: var(--primary-green); }
+        .grid-item span { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-main); text-align: center; }
+        .menu-info { flex: 1; padding: 50px 40px; background: var(--bg-secondary); display: flex; flex-direction: column; gap: 25px; border-left: 1px solid var(--border-color); overflow-y: auto; }
+        .moa-badge { color: var(--primary-green); font-weight: 800; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px;}
+        .menu-info h3 { font-size: 2rem; color: var(--text-main); line-height: 1.2; }
+        .info-card { border: 1px solid var(--border-color); padding: 25px; border-radius: 24px; background: var(--card-bg); box-shadow: var(--shadow-sm); }
+
+        /* --- CHATBOT FAB (direct link to chat.html) --- */
+        .chatbot-fab {
+            position: fixed; bottom: 30px; right: 30px;
+            width: 65px; height: 65px; background: var(--primary-green); color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; box-shadow: 0 10px 25px rgba(46, 163, 84, 0.4);
+            cursor: pointer; z-index: 1000; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .chatbot-fab a { color: white; display: flex; align-items: center; gap: 5px; text-decoration: none; width: 100%; height: 100%; justify-content: center; border-radius: 50%; }
+        .chatbot-fab:hover { transform: scale(1.1) translateY(-5px); background: var(--primary-hover); }
+
+        /* --- FOOTER --- */
+        .footer {
+            background: var(--bg-main);
+            padding: 40px 20px;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            margin-top: 50px;
+        }
+        .footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+        .footer-powered { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; }
+        .footer-powered span { color: var(--primary-green); font-weight: 800; }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 992px) {
+            .nav-links { display: none; }
+            .hero-content h1 { font-size: 3rem; }
+            .info-section { flex-direction: column; text-align: center; margin-top: 150px; }
+            .modal-content { flex-direction: column; height: 90vh; }
+            .menu-grid { padding: 30px 20px; }
+            .menu-info { padding: 30px 20px; border-left: none; border-top: 1px solid var(--border-color); }
+            .search-pill { flex-direction: column; width: 90%; border-radius: 24px; padding: 20px; bottom: -120px; gap: 15px; }
+            .search-item { border-right: none; border-bottom: 1px solid var(--border-color); padding: 10px 0; width: 100%; }
+            .search-item:last-of-type { border-bottom: none; }
+            .btn-main { width: 100%; }
+            .chatbot-fab { bottom: 20px; right: 20px; width: 55px; height: 55px; font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-left">
+        <div class="hamburger" id="openMenu"><i class="fa-solid fa-bars"></i></div>
+        <div class="logo-text">MOA Digital</div>
+    </div>
+    <ul class="nav-links">
+        <li><a href="home.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="contact.html">Connect</a></li>
+        <li><a href="#logout">LogOut</a></li>
+    </ul>
+    <div class="nav-right">
+        <div class="icon-btn" id="themeToggle"><i class="fa-solid fa-moon"></i></div>
+        <div class="icon-btn" id="notificationBtn" title="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notification-dot"></span>
+        </div>
+        <div class="profile-wrapper">
+            <div class="icon-btn profile-icon" id="profileBtn" title="Profile Menu">
+                <i class="fa-regular fa-user"></i>
+            </div>
+            <div class="profile-dropdown" id="profileDropdown">
+                <div class="profile-header">
+                    <h4>Abel Mesfin</h4>
+                    <p>abel.mesfin@moa.gov.et</p>
+                </div>
+                <hr>
+                <a href="#personal-info" id="viewProfileBtn"><i class="fa-regular fa-id-card"></i> Personal Information</a>
+                <a href="#settings"><i class="fa-solid fa-gear"></i> Account Settings</a>
+                <a href="#help"><i class="fa-regular fa-circle-question"></i> Help & Support</a>
+                <hr>
+                <a href="#logout" class="logout-link" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i> Logout</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- FIXED MEGA MENU MODAL: all grid items now have clean routes and proper anchors -->
+<div class="modal-overlay" id="menuModal">
+    <div class="modal-content">
+        <div class="close-btn" id="closeMenu"><i class="fa-solid fa-xmark"></i></div>
+        <div class="menu-grid" id="dynamicGrid">
+            <div class="grid-item" data-title="Holiday Calendar" data-desc="View national agricultural holidays, planting seasons, and farmer celebration days.">
+                <a href="./Holiday.html"><i class="fa-solid fa-umbrella-beach"></i><span>HOLIDAY</span></a>
+            </div>
+            <div class="grid-item" data-title="Promotions & Grants" data-desc="Current subsidies, fertilizer discounts, and EU funding opportunities for Ethiopian farmers.">
+                <a href="./Promo.html"><i class="fa-solid fa-bullhorn"></i><span>PROMO</span></a>
+            </div>
+            <div class="grid-item" data-title="BSC-Desk" data-desc="Balanced Scorecard dashboard for regional agricultural performance metrics.">
+                <a href="./BSC.html"><i class="fa-solid fa-stamp"></i><span>BSC-DESK</span></a>
+            </div>
+            <div class="grid-item" data-title="Expert Directory" data-desc="Connect with agronomists, vets, and crop specialists across Ethiopia.">
+                <a href="./Letter.html"><i class="fa-solid fa-file-signature"></i><span>LETTER</span></a>
+            </div>
+            <div class="grid-item" data-title="KPIs" data-desc="Real-time key performance indicators for yield, irrigation, and soil health.">
+                <a href="./KPIs.html"><i class="fa-solid fa-chart-pie"></i><span>KPIS</span></a>
+            </div>
+            <div class="grid-item" data-title="Meeting Minutes" data-desc="Archive of MOA board meetings and regional agricultural councils.">
+                <a href="./Minutes.html"><i class="fa-solid fa-users-rectangle"></i><span>MINUTES</span></a>
+            </div>
+            <div class="grid-item" data-title="Reports" data-desc="Downloadable annual reports, crop forecasts, and sustainability audits.">
+                <a href="./Reports.html"><i class="fa-solid fa-file-contract"></i><span>REPORTS</span></a>
+            </div>
+            <div class="grid-item" data-title="Farmer Survey" data-desc="Participate in national surveys to shape agricultural policy.">
+                <a href="./Survey.html"><i class="fa-solid fa-clipboard-question"></i><span>SURVEY</span></a>
+            </div>
+            <div class="grid-item" data-title="Todo / Tasks" data-desc="Personal task manager for extension agents and farm managers.">
+                <a href="./todo.html"><i class="fa-solid fa-list-check"></i><span>TODO</span></a>
+            </div>
+        </div>
+        <div class="menu-info" id="menuInfo">
+            <div class="moa-badge">Digital Hub</div>
+            <h3>Let's make it <br><span style="color: var(--primary-green);">Sustainable.</span></h3>
+            <p style="color: var(--text-muted);">Select a module from the grid to access advanced tools & real-time agricultural insights.</p>
+            <div class="info-card" id="dynamicInfoCard">
+                <p style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Module Information</p>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Click any card to open dedicated dashboard.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<header class="hero">
+    <div class="hero-container">
+        <div class="hero-content animate-up">
+            <h1>Sustainable Farming for Tomorrow</h1>
+            <p>Empowering Ethiopian farmers with cutting-edge digital tools to enhance productivity, track yields, and ensure environmental harmony.</p>
+            <button class="btn-main" id="exploreBtn">Explore Platform</button>
+        </div>
+        <div class="search-pill animate-up" style="animation-delay: 0.2s;">
+            <div class="search-item"><label>Resource Type</label><input type="text" id="resourceType" placeholder="e.g., Fertilizer, Seeds..."></div>
+            <div class="search-item"><label>Region</label><input type="text" id="region" placeholder="e.g., Addis Ababa, Oromia..."></div>
+            <button class="btn-main" id="searchBtn" style="padding: 14px 40px; box-shadow: none;">Search</button>
+        </div>
+    </div>
+</header>
+
+<section class="info-section scroll-hidden">
+    <div class="info-img"><img src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=80&w=1000" alt="Sustainable Farm"></div>
+    <div class="info-text"><h2>Bridging Tradition with <span>Technology</span></h2><p>Welcome to MOA Digital. We provide a seamless interface for supply chain tracking, expert consultations, and regional agricultural management. Join us in cultivating a greener future.</p><button class="btn-main" onclick="alert('More about MOA Digital coming soon!')">Learn More</button></div>
+</section>
+
+<section class="grid-section"><h2 class="scroll-hidden">Explore Key Sectors</h2>
+    <div class="grid-container">
+        <div class="card scroll-hidden"><img src="https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&q=80&w=800" alt="Fields"><h3>Crop Management</h3><p>Track seasonal yields, regional health, and predict harvest outcomes using our real-time data integration.</p><button class="btn-card" onclick="alert('Dashboard opening...')">View Dashboard</button></div>
+        <div class="card scroll-hidden"><img src="https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=800" alt="Sustainability"><h3>Eco-Initiatives</h3><p>Discover organic farming methods, participate in local reforestation, and access carbon credit info.</p><button class="btn-card" onclick="alert('Loading initiatives...')">Get Involved</button></div>
+        <div class="card scroll-hidden"><img src="https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&q=80&w=800" alt="Livestock"><h3>Livestock Hub</h3><p>Comprehensive tracking for national poultry and cattle, including vaccine schedules and breeding data.</p><button class="btn-card" onclick="alert('Opening portal...')">Open Portal</button></div>
+    </div>
+</section>
+
+<section class="grid-section" style="background: var(--bg-main);">
+    <h2 style="font-size: 2rem; margin-bottom: 40px; text-align: center;">Live <span style="color: var(--primary-green);">Crop Insights</span></h2>
+    <div class="grid-container">
+        <div class="card" style="padding: 30px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><i class="fa-solid fa-wheat-awn" style="font-size: 2rem; color: var(--primary-green);"></i><span style="font-size: 0.8rem; font-weight: 800; color: var(--primary-green); background: rgba(46, 163, 84, 0.1); padding: 5px 12px; border-radius: 100px;">WHEAT</span></div><h4 style="font-size: 1.2rem; margin-bottom: 10px;">National Yield Forecast</h4><p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Expected +12% increase in Oromia region due to improved irrigation.</p><div style="background: var(--bg-secondary); height: 8px; border-radius: 10px; overflow: hidden;"><div style="width: 85%; height: 100%; background: var(--primary-green);"></div></div><p style="font-size: 0.75rem; margin-top: 8px; font-weight: 700;">85% of Target Reached</p></div>
+        <div class="card" style="padding: 30px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><i class="fa-solid fa-cloud-showers-heavy" style="font-size: 2rem; color: #3b82f6;"></i><span style="font-size: 0.8rem; font-weight: 800; color: #3b82f6; background: rgba(59, 130, 246, 0.1); padding: 5px 12px; border-radius: 100px;">WEATHER</span></div><h4 style="font-size: 1.2rem; margin-bottom: 10px;">Rainfall Pattern</h4><p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Steady precipitation expected for the next 14 days in the central highlands.</p><div style="background: var(--bg-secondary); height: 8px; border-radius: 10px; overflow: hidden;"><div style="width: 60%; height: 100%; background: #3b82f6;"></div></div><p style="font-size: 0.75rem; margin-top: 8px; font-weight: 700;">Optimal Moisture: 60%</p></div>
+    </div>
+</section>
+
+<section class="info-section" style="padding-top: 50px;">
+    <div class="info-text"><h2 style="font-size: 2rem;">Get in <span style="color: var(--primary-green);">Touch</span></h2><p style="color: var(--text-muted); margin-bottom: 30px;">Have questions about subsidies or modern farming techniques? Our digital desk is here to help.</p><div style="display: flex; flex-direction: column; gap: 15px;"><input type="text" placeholder="Full Name" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main);"><input type="email" placeholder="Email Address" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main);"><textarea placeholder="Your Message" rows="4" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main);"></textarea><button class="btn-main">Send Message</button></div></div>
+    <div class="info-img" style="text-align: center;"><div style="background: var(--bg-secondary); padding: 40px; border-radius: 32px; border: 1px solid var(--border-color);"><i class="fa-solid fa-headset" style="font-size: 4rem; color: var(--primary-green); margin-bottom: 20px;"></i><h3>Direct Support</h3><p style="margin: 15px 0;">support@moa.gov.et</p><p style="font-weight: 800; font-size: 1.2rem;">+251 11 123 4567</p></div></div>
+</section>
+
+<!-- FLOATING CHAT BUTTON: opens chat.html directly (reliable, no alert) -->
+<div class="chatbot-fab" id="chatbotFab">
+    <a href="./chat.html" target="_blank" rel="noopener noreferrer">
+        <i class="fa-solid fa-messages"></i>
+        <i class="fa-solid fa-comment-dots" style="margin-left: -8px;"></i>
+    </a>
+</div>
+
+<footer class="footer"><div class="footer-content"><p>© 2026 Ministry of Agriculture. All rights reserved.</p><p class="footer-powered">Powered by: <span>KUKUNET DIGITAL</span></p></div></footer>
+
+<script>
+    // THEME TOGGLE
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const themeIcon = themeToggleBtn.querySelector('i');
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    function updateThemeIcon(theme) { theme === 'dark' ? (themeIcon.classList.remove('fa-moon'), themeIcon.classList.add('fa-sun')) : (themeIcon.classList.remove('fa-sun'), themeIcon.classList.add('fa-moon')); }
+    updateThemeIcon(currentTheme);
+    themeToggleBtn.addEventListener('click', () => {
+        let theme = document.documentElement.getAttribute('data-theme');
+        let newTheme = theme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    });
+
+    // Profile dropdown logic
+    const profileBtn = document.getElementById('profileBtn');
+    const profileDropdown = document.getElementById('profileDropdown');
+    profileBtn.addEventListener('click', (e) => { e.stopPropagation(); profileDropdown.classList.toggle('active'); });
+    document.addEventListener('click', (e) => { if (!profileDropdown.contains(e.target) && !profileBtn.contains(e.target)) profileDropdown.classList.remove('active'); });
+    document.getElementById('viewProfileBtn').addEventListener('click', (e) => { e.preventDefault(); alert('📋 Personal Information panel — ID: ABEL-024, Region: Addis Ababa'); profileDropdown.classList.remove('active'); });
+    document.getElementById('logoutBtn').addEventListener('click', (e) => { e.preventDefault(); if(confirm('Logout from MOA Digital?')) alert('You have been securely logged out.'); profileDropdown.classList.remove('active'); });
+
+    // Notifications
+    const notificationBtn = document.getElementById('notificationBtn');
+    const notificationDot = document.querySelector('.notification-dot');
+    notificationBtn.addEventListener('click', () => { alert('🌾 You have 2 new notifications: "Rainy season advisory" & "Fertilizer subsidy extension".'); if(notificationDot) notificationDot.style.display = 'none'; });
+
+    // Modal open/close (mega menu)
+    const modal = document.getElementById('menuModal');
+    const openMenuBtn = document.getElementById('openMenu');
+    const closeMenuBtn = document.getElementById('closeMenu');
+    openMenuBtn.addEventListener('click', () => modal.classList.add('active'));
+    closeMenuBtn.addEventListener('click', () => modal.classList.remove('active'));
+    window.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+
+    // Interactive info inside modal (dynamic preview when hovering over grid items - optional enhancement)
+    const gridItems = document.querySelectorAll('.grid-item');
+    const infoCardDiv = document.getElementById('dynamicInfoCard');
+    gridItems.forEach(item => {
+        const title = item.getAttribute('data-title');
+        const desc = item.getAttribute('data-desc');
+        if(title && desc) {
+            item.addEventListener('mouseenter', () => {
+                infoCardDiv.innerHTML = `<p style="font-size: 1.1rem; font-weight: 700; color: var(--primary-green); margin-bottom: 8px;">${title}</p><p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">${desc}</p>`;
+            });
+            item.addEventListener('mouseleave', () => {
+                infoCardDiv.innerHTML = `<p style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Module Information</p><p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Hover over any card to see details or click to open the full module.</p>`;
+            });
+        }
+    });
+
+    // SEARCH SIMULATION
+    document.getElementById('searchBtn').addEventListener('click', () => { 
+        const resource = document.getElementById('resourceType').value.trim();
+        const region = document.getElementById('region').value.trim();
+        alert(`🔍 MOA Search: ${resource || 'All resources'} in ${region || 'All regions'} — Results will appear in the dashboard soon.`);
+    });
+    document.getElementById('exploreBtn').addEventListener('click', () => { document.querySelector('.info-section').scrollIntoView({ behavior: 'smooth' }); });
+
+    // SCROLL ANIMATIONS
+    const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if(entry.isIntersecting) { entry.target.classList.add('scroll-visible'); observer.unobserve(entry.target); } }); }, { threshold: 0.15 });
+    document.querySelectorAll('.scroll-hidden').forEach(el => observer.observe(el));
+
+    // CHAT FIX: The chatbot-fab now directly contains an <a href="./chat.html"> with target="_blank"
+    // no extra JavaScript overlay or alert — chat window appears as a dedicated page, solving the “not appearing issue”
+    // Additionally, any prior inline chatWindow is completely removed, making the experience consistent.
+    console.log("MOA Interface Ready — All grid links functional, chat opens chat.html correctly.");
+</script>
+</body>
+</html>

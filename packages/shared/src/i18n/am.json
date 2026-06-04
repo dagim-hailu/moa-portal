@@ -1,0 +1,20 @@
+{
+  "portal.name": "የግብርና ሚኒስቴር ፖርታል",
+  "portal.subtitle": "ዲጂታል የስራ ቦታ",
+  "nav.dashboard": "ዳሽቦርድ",
+  "nav.settings": "ቅንብሮች",
+  "nav.signOut": "ውጣ",
+  "auth.email": "ኢሜይል ወይም የሰራተኛ መለያ",
+  "auth.password": "የይለፍ ቃል",
+  "auth.signIn": "ግባ",
+  "auth.invalid": "የተሳሳተ መረጃ",
+  "auth.forgot": "የይለፍ ቃል ረሳህ?",
+  "sidebar.empty": "ምንም መተግበሪያ አልተመደበም። አስተዳዳሪዎን ያነጋግሩ።",
+  "admin.title": "አስተዳደር",
+  "admin.register": "አዲስ መተግበሪያ መዝግብ",
+  "dms.title": "የሰነድ አስተዳደር",
+  "error.403": "መዳረሻ ተከልክሏል",
+  "error.404": "ገጹ አልተገኘም",
+  "common.dashboard": "ወደ ዳሽቦርድ",
+  "common.search": "በመተግበሪያዎች ውስጥ ፈልግ..."
+}

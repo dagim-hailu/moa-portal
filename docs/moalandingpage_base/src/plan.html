@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Prestige Plan | Planning & Reporting System</title>
+    <!-- Google Fonts + Font Awesome + Chart.js -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f9ff;
+            color: #1f2b3d;
+            overflow-x: hidden;
+        }
+
+        /* modern scroll */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #eef2f8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #b9d0e0; border-radius: 10px; }
+
+        /* app container with sidebar */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* SIDEBAR - collapsible */
+        .sidebar {
+            width: 260px;
+            background: #ffffff;
+            backdrop-filter: blur(2px);
+            border-right: 1px solid #e9edf2;
+            transition: width 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 10;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.02);
+        }
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        .sidebar-header {
+            padding: 24px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #eff3f8;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+        }
+        .logo-icon {
+            background: linear-gradient(135deg, #1b6b4c, #2c9f6e);
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.1rem;
+        }
+        .logo-text {
+            font-weight: 800;
+            font-size: 1rem;
+            white-space: nowrap;
+            background: linear-gradient(120deg, #1e4620, #1f6e43);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .collapse-toggle {
+            background: #f1f5f9;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #546e7a;
+            transition: 0.2s;
+        }
+        .nav-menu {
+            flex: 1;
+            padding: 28px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            color: #4a5b6e;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .nav-item i { width: 22px; font-size: 1.15rem; }
+        .nav-item.active {
+            background: #eaf6ef;
+            color: #1f6e43;
+        }
+        .nav-item:hover:not(.active) {
+            background: #f0f4fa;
+            color: #2b5e3b;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1;
+            padding: 24px 32px;
+            transition: all 0.2s;
+        }
+        /* top bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .page-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            background: linear-gradient(145deg, #1a3e2f, #2c6e49);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .top-actions {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .year-selector {
+            background: white;
+            border: 1px solid #e2e9f2;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .icon-badge {
+            background: #f0f5fa;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+        }
+        /* summary cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 22px;
+            margin-bottom: 40px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+            border: 1px solid #eef3fc;
+            transition: 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.08);}
+        .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .stat-value { font-size: 2rem; font-weight: 800; margin-top: 6px; color: #1a2c3e; }
+        .trend { font-size: 0.7rem; font-weight: 600; background: #eef2f0; padding: 4px 8px; border-radius: 20px;}
+
+        /* planning table */
+        .planning-section, .kpi-section, .form-section {
+            margin-top: 42px;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            background: #1f6e43;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(31,110,67,0.2);
+        }
+        .btn-primary:hover { background: #135a38; transform: scale(0.98);}
+        .plans-table {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #eef2f8;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 18px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f0f4fa;
+        }
+        .status-badge {
+            background: #e6f7ec;
+            color: #1f6e43;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        /* KPI cards row */
+        .kpi-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 36px;
+        }
+        .kpi-card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            flex: 1 1 220px;
+            text-align: center;
+            border: 1px solid #eef2fc;
+        }
+        .circular-progress {
+            width: 100px;
+            height: 100px;
+            margin: 12px auto;
+            position: relative;
+        }
+        canvas.circle-canvas { width: 100%; height: 100%; }
+        .kpi-title { font-weight: 700; margin-top: 8px; }
+
+        .charts-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+            margin: 28px 0;
+        }
+        .chart-box {
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            flex: 1 1 45%;
+            border: 1px solid #eef2f8;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .filter-select {
+            background: white;
+            border: 1px solid #dee6ef;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-weight: 500;
+        }
+
+        /* form */
+        .plan-form {
+            background: white;
+            border-radius: 32px;
+            padding: 28px;
+            margin-top: 20px;
+            border: 1px solid #eef3fc;
+        }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            flex: 1;
+        }
+        .input-group label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            border: 1px solid #e2edf7;
+            background: #fefefe;
+            font-family: inherit;
+        }
+        .quarter-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .actions {
+            display: flex;
+            gap: 16px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        .toast-msg {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1f6e43;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 48px;
+            font-weight: 500;
+            z-index: 1200;
+            opacity: 0;
+            transition: 0.2s;
+        }
+
+        @media (max-width: 880px) {
+            .sidebar { width: 80px; }
+            .sidebar .logo-text, .sidebar .nav-item span { display: none; }
+            .main-content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+    <!-- Sidebar (collapsible) -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon"><i class="fas fa-chart-simple"></i></div>
+                <span class="logo-text">PrestigePlan</span>
+            </div>
+            <button class="collapse-toggle" id="collapseSidebar"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></div>
+            <div class="nav-item"><i class="fas fa-clipboard-list"></i><span>My Plan</span></div>
+            <div class="nav-item"><i class="fas fa-chart-line"></i><span>Reports</span></div>
+            <div class="nav-item"><i class="fas fa-layer-group"></i><span>All Plans</span></div>
+            <div class="nav-item"><i class="fas fa-tasks"></i><span>Tasks</span></div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title"><h1>My Plan</h1></div>
+            <div class="top-actions">
+                <div class="year-selector"><i class="fas fa-calendar-alt"></i> <select id="budgetYearSelect"><option>2024</option><option>2025</option><option>2026</option></select></div>
+                <div class="icon-badge"><i class="far fa-bell"></i></div>
+                <div class="icon-badge"><i class="far fa-user-circle"></i></div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-grid">
+            <div class="stat-card"><div class="stat-header"><i class="fas fa-file-alt fa-2x" style="color:#2c9f6e;"></i><span class="trend">↑ 8%</span></div><div class="stat-value" id="totalPlans">24</div><div>Total Plans</div></div>
+            <div class="stat-card"><div class="stat-header"><i class="fas fa-check-circle fa-2x" style="color:#3b82f6;"></i><span class="trend">↑ 12%</span></div><div class="stat-value" id="completedKpis">18</div><div>Completed KPIs</div></div>
+            <div class="stat-card"><div class="stat-header"><i class="fas fa-hourglass-half fa-2x" style="color:#f59e0b;"></i><span class="trend">4 pending</span></div><div class="stat-value" id="pendingTasks">7</div><div>Pending Tasks</div></div>
+            <div class="stat-card"><div class="stat-header"><i class="fas fa-chart-pie fa-2x" style="color:#8b5cf6;"></i><span>Performance</span></div><div style="width:80px; margin:0 auto;"><canvas id="performanceChart" width="80" height="80" style="max-width:80px; max-height:80px"></canvas></div><div class="stat-value" id="perfScoreVal" style="font-size:1rem;">76%</div></div>
+        </div>
+
+        <!-- Planning Section (table) -->
+        <div class="planning-section">
+            <div class="section-header"><h2><i class="fas fa-tasks"></i> Strategic Plans</h2><button class="btn-primary" id="scrollToFormBtn"><i class="fas fa-plus"></i> Create New Plan</button></div>
+            <div class="plans-table">
+                <table id="plansTable">
+                    <thead><tr><th>Plan Title</th><th>Description</th><th>Timeline</th><th>Status</th></tr></thead>
+                    <tbody id="planTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- KPI + Reporting Section -->
+        <div class="kpi-section">
+            <div class="section-header"><h2><i class="fas fa-chart-simple"></i> KPI Dashboard</h2></div>
+            <div class="kpi-cards" id="kpiCardsContainer"></div>
+            <div class="filter-bar">
+                <select id="filterYear" class="filter-select"><option>2024</option><option>2025</option></select>
+                <select id="filterDept" class="filter-select"><option>Agriculture</option><option>Infrastructure</option><option>Education</option></select>
+                <select id="filterCategory" class="filter-select"><option>Strategic</option><option>Operational</option></select>
+                <button class="btn-primary" id="applyFiltersBtn" style="padding:6px 18px;"><i class="fas fa-chart-line"></i> Update Insights</button>
+            </div>
+            <div class="charts-container">
+                <div class="chart-box"><canvas id="lineChart" style="height:260px; width:100%"></canvas><p class="sub">Progress over months</p></div>
+                <div class="chart-box"><canvas id="barChart" style="height:260px; width:100%"></canvas><p class="sub">Quarterly performance</p></div>
+            </div>
+        </div>
+
+        <!-- Form: Plan Input -->
+        <div class="form-section" id="planFormSection">
+            <div class="section-header"><h2><i class="fas fa-pen-ruler"></i> Create New Plan</h2></div>
+            <div class="plan-form">
+                <div class="form-row"><div class="input-group"><label>Plan Title</label><input type="text" id="planTitle" placeholder="e.g., Agricultural Transformation 2025"></div>
+                <div class="input-group"><label>Category</label><select id="planCategory"><option>Strategic</option><option>Tactical</option></select></div>
+                <div class="input-group"><label>Year</label><select id="planYear"><option>2025</option><option>2026</option></select></div></div>
+                <div class="input-group"><label>Description</label><textarea rows="2" id="planDesc" placeholder="Objectives and key results ..."></textarea></div>
+                <div class="input-group"><label>KPI Targets (Primary)</label><input type="text" id="kpiTarget" placeholder="e.g., Increase yield by 20%"></div>
+                <div class="input-group"><label>Quarterly Milestones (Q1-Q4 values)</label><div class="quarter-group"><input placeholder="Q1" id="q1Val"><input placeholder="Q2" id="q2Val"><input placeholder="Q3" id="q3Val"><input placeholder="Q4" id="q4Val"></div></div>
+                <div class="actions"><button class="btn-primary" id="savePlanBtn"><i class="fas fa-save"></i> Save Plan</button><button id="cancelFormBtn" style="background:transparent; border:1px solid #ccc; border-radius:40px; padding:10px 28px;">Cancel</button></div>
+            </div>
+        </div>
+    </main>
+</div>
+<div id="toastMessage" class="toast-msg">✅ Plan saved</div>
+
+<script>
+    // ----- Mock data and helpers
+    let plansArray = [
+        { title: "Green Legacy Initiative", desc: "Afforestation & climate resilience", timeline: "Jan-Dec 2025", status: "Active" },
+        { title: "Digital Agriculture Plan", desc: "IoT based monitoring", timeline: "Q2-Q4 2025", status: "Completed" },
+        { title: "Irrigation Expansion", desc: "Small-scale irrigation", timeline: "2025-2026", status: "Pending" }
+    ];
+
+    function renderPlansTable() {
+        const tbody = document.getElementById('planTableBody');
+        tbody.innerHTML = '';
+        plansArray.forEach(p => {
+            let row = `<tr><td><strong>${escapeHtml(p.title)}</strong></td><td>${escapeHtml(p.desc)}</td><td>${escapeHtml(p.timeline)}</td><td><span class="status-badge">${p.status}</span></td></tr>`;
+            tbody.innerHTML += row;
+        });
+        document.getElementById('totalPlans').innerText = plansArray.length;
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    // Circular KPI draws
+    function drawCircle(canvasId, percent, color) {
+        const canvas = document.getElementById(canvasId);
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const size = 80;
+        canvas.width = size; canvas.height = size;
+        const centerX = size/2, centerY = size/2, radius = 30, startAngle = -0.5 * Math.PI;
+        const endAngle = startAngle + (2 * Math.PI * percent/100);
+        ctx.clearRect(0,0,size,size);
+        ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2*Math.PI); ctx.strokeStyle = "#e6edf4"; ctx.lineWidth = 6; ctx.stroke();
+        ctx.beginPath(); ctx.arc(centerX, centerY, radius, startAngle, endAngle); ctx.strokeStyle = color; ctx.lineWidth = 6; ctx.stroke();
+        ctx.font = "bold 14px Inter"; ctx.fillStyle = "#1f2b3d"; ctx.fillText(percent+"%", centerX-14, centerY+5);
+    }
+    // KPI cards dynamic
+    const kpiData = [
+        { name: "Crop Yield", value: 78, color: "#1f6e43" },
+        { name: "Budget Utilization", value: 64, color: "#eab308" },
+        { name: "Farmer Adoption", value: 91, color: "#3b82f6" }
+    ];
+    function renderKpiCards() {
+        const container = document.getElementById('kpiCardsContainer');
+        container.innerHTML = '';
+        kpiData.forEach((k, idx) => {
+            const card = document.createElement('div'); card.className = 'kpi-card';
+            card.innerHTML = `<div class="circular-progress"><canvas id="kpiCanvas${idx}" width="80" height="80"></canvas></div><div class="kpi-title">${k.name}</div><div style="font-weight:700">${k.value}%</div>`;
+            container.appendChild(card);
+            drawCircle(`kpiCanvas${idx}`, k.value, k.color);
+        });
+    }
+    // Performance doughnut chart
+    let perfChart;
+    function initPerformanceChart(percent=76) {
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        if(perfChart) perfChart.destroy();
+        perfChart = new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [percent, 100-percent], backgroundColor: ['#1f6e43','#e2eef5'], borderWidth:0 }] }, options: { cutout:'70%', plugins: { tooltip: { enabled: false }, legend: { display: false } } } });
+        document.getElementById('perfScoreVal').innerText = percent+'%';
+    }
+    // line & bar charts
+    let lineChart, barChart;
+    function initCharts() {
+        const lineCtx = document.getElementById('lineChart').getContext('2d');
+        const barCtx = document.getElementById('barChart').getContext('2d');
+        lineChart = new Chart(lineCtx, { type: 'line', data: { labels: ['Jan','Feb','Mar','Apr','May','Jun'], datasets: [{ label: 'Progress %', data: [45,52,60,68,74,82], borderColor: '#1f6e43', tension:0.3, fill:false }] }, options: { responsive: true, maintainAspectRatio: true } });
+        barChart = new Chart(barCtx, { type: 'bar', data: { labels: ['Q1','Q2','Q3','Q4'], datasets: [{ label: 'Quarterly KPI Score', data: [72, 78, 83, 88], backgroundColor: '#8bc34a' }] }, options: { responsive: true } });
+    }
+    function updateChartsByFilter(year, dept, cat) {
+        const mockLineData = [48,55,63,71,79,85];
+        const mockBarData = [68,74,81,87];
+        if(lineChart) { lineChart.data.datasets[0].data = mockLineData; lineChart.update(); }
+        if(barChart) { barChart.data.datasets[0].data = mockBarData; barChart.update(); }
+        // update KPI card values
+        kpiData[0].value = year==='2024'?78:82; kpiData[1].value = 66; kpiData[2].value = 88;
+        renderKpiCards();
+        document.getElementById('completedKpis').innerText = Math.floor(Math.random()*10)+18;
+        document.getElementById('pendingTasks').innerText = Math.floor(Math.random()*5)+3;
+        showToast("Filters applied · data refreshed");
+    }
+    function showToast(msg) {
+        let toast = document.getElementById('toastMessage');
+        toast.innerText = msg;
+        toast.style.opacity = '1';
+        setTimeout(() => toast.style.opacity = '0', 2200);
+    }
+    // Save new plan
+    document.getElementById('savePlanBtn').addEventListener('click', () => {
+        let title = document.getElementById('planTitle').value.trim();
+        if(!title) { showToast("Please enter plan title"); return; }
+        let desc = document.getElementById('planDesc').value || "Strategic initiative";
+        let timeline = document.getElementById('planYear').value;
+        let status = "Active";
+        plansArray.push({ title, desc, timeline, status });
+        renderPlansTable();
+        document.getElementById('planTitle').value = '';
+        document.getElementById('planDesc').value = '';
+        document.getElementById('q1Val').value = ''; document.getElementById('q2Val').value = ''; document.getElementById('q3Val').value = ''; document.getElementById('q4Val').value = '';
+        showToast("✅ New plan added successfully");
+    });
+    document.getElementById('cancelFormBtn').addEventListener('click', () => { document.getElementById('planTitle').value = ''; document.getElementById('planDesc').value = ''; showToast("Form cleared"); });
+    document.getElementById('scrollToFormBtn').addEventListener('click', () => { document.getElementById('planFormSection').scrollIntoView({ behavior: 'smooth' }); });
+
+    // Sidebar collapse
+    const sidebar = document.getElementById('sidebar');
+    const collapseBtn = document.getElementById('collapseSidebar');
+    collapseBtn.addEventListener('click', () => { sidebar.classList.toggle('collapsed'); });
+    // Budget year selector dummy update
+    document.getElementById('budgetYearSelect').addEventListener('change', (e) => { let val = e.target.value; document.getElementById('perfScoreVal').innerText = val==='2024'?'76%':'81%'; initPerformanceChart(val==='2024'?76:81); showToast(`Budget year ${val} loaded`); });
+    // Apply filters for reporting
+    document.getElementById('applyFiltersBtn').addEventListener('click', () => {
+        const year = document.getElementById('filterYear').value;
+        const dept = document.getElementById('filterDept').value;
+        const cat = document.getElementById('filterCategory').value;
+        updateChartsByFilter(year, dept, cat);
+    });
+    // initial load render
+    renderPlansTable();
+    renderKpiCards();
+    initPerformanceChart(76);
+    initCharts();
+    // set pending tasks value hardcoded
+    document.getElementById('pendingTasks').innerText = '7';
+    document.getElementById('completedKpis').innerText = '18';
+    // tooltip simulation (native title)
+    const kpiCardsDiv = document.querySelectorAll('.kpi-card');
+    kpiCardsDiv.forEach(c => c.setAttribute('title','Click for detailed KPI breakdown'));
+</script>
+</body>
+</html>

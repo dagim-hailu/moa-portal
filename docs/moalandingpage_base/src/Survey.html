@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>VoxPop | Enterprise Customer Satisfaction Suite</title>
+    <!-- Google Fonts + Font Awesome + Chart.js -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f5f9ff; font-family: 'Inter', sans-serif; color: #1e2f3e; scroll-behavior: smooth; }
+        .survey-container { max-width: 1400px; margin: 0 auto; padding: 24px 28px 48px; }
+        .card { background: #ffffff; border-radius: 36px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.02); border: 1px solid #eef2fa; transition: all 0.2s ease; }
+        .hero-section { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 32px; padding: 24px 32px; }
+        .hero-text h1 { font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #1b6b4c, #2c9f6e); background-clip: text; -webkit-background-clip: text; color: transparent; letter-spacing: -0.3px; }
+        .hero-text p { color: #5a6e8a; margin-top: 8px; font-size: 1rem; }
+        .qr-share-area { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; background: #f8fafe; padding: 12px 20px; border-radius: 60px; }
+        .qr-code { background: white; padding: 6px; border-radius: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .share-buttons { display: flex; gap: 12px; }
+        .share-icon { width: 38px; height: 38px; background: white; border-radius: 40px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; border: 1px solid #e2ecf5; color: #2c5a6e; }
+        .share-icon:hover { background: #eef3fc; transform: translateY(-2px); color: #1b6b4c; }
+        .progress-wrapper { margin-bottom: 28px; }
+        .progress-bar-bg { background: #e9f0f5; border-radius: 40px; height: 8px; width: 100%; }
+        .progress-fill { background: #1b6b4c; width: 0%; height: 8px; border-radius: 40px; transition: width 0.3s ease; }
+        .step-counter { display: flex; justify-content: space-between; margin-top: 12px; font-weight: 500; font-size: 0.8rem; color: #5e7e9e; }
+        .step { display: none; animation: fade 0.25s ease; }
+        .step.active-step { display: block; }
+        @keyframes fade { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+        .form-card { padding: 32px 36px; margin-bottom: 28px; }
+        .rating-group { margin-bottom: 28px; }
+        .rating-label { font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .stars { display: flex; gap: 12px; font-size: 1.8rem; color: #cfdfe9; cursor: pointer; }
+        .stars .fa-star.active { color: #f5b042; text-shadow: 0 0 2px rgba(0,0,0,0.1); }
+        .yesno-group { display: flex; gap: 24px; margin: 12px 0 20px; flex-wrap: wrap; }
+        .yesno-option { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        /* staff grid with avatar */
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+            margin: 18px 0 12px;
+        }
+        .staff-card {
+            background: #fafcff;
+            border: 2px solid #eef2fa;
+            border-radius: 28px;
+            padding: 20px 16px;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+            position: relative;
+        }
+        .staff-card.selected {
+            border-color: #1b6b4c;
+            background: #f0f9f4;
+            box-shadow: 0 10px 20px rgba(27,107,76,0.12);
+        }
+        .staff-card input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+        }
+        .staff-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(145deg, #e0f0e8, #c8e0d4);
+            border-radius: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 2.2rem;
+            color: #1b6b4c;
+        }
+        .staff-name { font-weight: 800; font-size: 1rem; margin-top: 6px; }
+        .staff-title { font-size: 0.75rem; color: #5a6e8a; margin-top: 4px; }
+        .seat-field { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.7rem; color: #4f6f8f; background: #f1f5fb; padding: 5px 10px; border-radius: 30px; width: fit-content; margin-left: auto; margin-right: auto; }
+        .seat-field i { font-size: 0.7rem; }
+        .seat-field input { width: 50px; padding: 4px; border-radius: 30px; border: 1px solid #dee9f2; text-align: center; background: white; }
+        input, textarea, select { width: 100%; padding: 14px 18px; border-radius: 28px; border: 1px solid #dee9f2; background: white; font-family: 'Inter'; outline: none; transition: 0.2s; }
+        input:focus, textarea:focus { border-color: #1b6b4c; box-shadow: 0 0 0 3px rgba(27,107,76,0.1); }
+        .btn-primary { background: #1b6b4c; color: white; border: none; padding: 14px 28px; border-radius: 60px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 10px; }
+        .btn-secondary { background: transparent; border: 1px solid #cfdfea; padding: 12px 24px; border-radius: 60px; cursor: pointer; font-weight: 600; }
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 32px; }
+        .thankyou-message { text-align: center; padding: 40px; }
+        .admin-section { margin-top: 48px; background: white; border-radius: 36px; padding: 24px; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+        .chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin: 28px 0; }
+        .response-item { border-bottom: 1px solid #edf2f8; padding: 14px 0; }
+        .lang-select { background: white; border-radius: 40px; padding: 8px 16px; border: 1px solid #dee9f2; }
+        @media (max-width: 780px) { .survey-container { padding: 16px; } .form-card { padding: 24px; } .hero-section { flex-direction: column; align-items: start; } }
+        footer { text-align: center; margin-top: 40px; font-size: 0.75rem; color: #8aa4bf; }
+        .toast-msg { position: fixed; bottom: 24px; right: 24px; background: #1b6b4c; color: white; padding: 12px 26px; border-radius: 60px; font-weight: 500; z-index: 2000; opacity: 0; transition: 0.2s; pointer-events: none; }
+    </style>
+</head>
+<body>
+<div class="survey-container">
+    <!-- Hero Section -->
+    <div class="card hero-section">
+        <div class="hero-text">
+            <h1 id="heroTitle">አገልግሎቱን የሰጠዎ ማን ነው? / We Value Your Feedback</h1>
+            <p id="heroDesc">ልምድዎን ማካፈል ለተሻለ አገልግሎት ይረዳል። Your insights shape our excellence.</p>
+        </div>
+        <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <select id="languageSelect" class="lang-select">
+                <option value="am">🇪🇹 አማርኛ</option>
+                <option value="en">🇬🇧 English</option>
+                <option value="fr">🇫🇷 Français</option>
+            </select>
+            <div class="qr-share-area">
+                <div class="qr-code" id="qrCodeImg"></div>
+                <div class="share-buttons">
+                    <div class="share-icon" id="copyLinkBtn"><i class="fas fa-link"></i></div>
+                    <div class="share-icon" id="twitterShare"><i class="fab fa-twitter"></i></div>
+                    <div class="share-icon" id="facebookShare"><i class="fab fa-facebook-f"></i></div>
+                    <div class="share-icon" id="linkedinShare"><i class="fab fa-linkedin-in"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-wrapper">
+        <div class="progress-bar-bg"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="step-counter"><span id="stepIndicator">Step 1 of 2</span> <span id="saveStatusMsg"></span></div>
+    </div>
+
+    <!-- Step 1: Staff Provider (TOP) + Ratings + Questions -->
+    <div class="step active-step" id="step1">
+        <div class="card form-card">
+            <!-- 🔹 SERVICE PROVIDER SECTION - MOVED TO TOP -->
+            <div class="rating-group" id="staffProviderSection">
+                <div class="rating-label" id="staffProviderLabel">🌾 አገልግሎቱን የሰጠዎ ማን ነው? / Who provided you the service?</div>
+                <div class="staff-grid" id="staffGrid"></div>
+                <div style="text-align: center; margin-top: 8px;">
+                    <span id="seatLabel" style="font-size:0.8rem; font-weight:500;">🪑 የመቀመጫ ቁጥር (አማራጭ) / Seat Number (optional):</span>
+                    <input type="text" id="seatNumberInput" placeholder="e.g., 04" style="width: 100px; padding: 8px 12px; margin-left: 8px; display: inline-block;">
+                </div>
+            </div>
+
+            <hr style="margin: 20px 0; border-color: #eef2fa;">
+
+            <h3 style="margin-bottom: 8px;" id="step1Title">⭐ የአገልግሎት ደረጃ / Service & Experience</h3>
+            <p style="margin-bottom: 28px; color:#6a7e9c;" id="step1Sub">እያንዳንዱን ገጽታ ደረጃ ይስጡ። Rate each aspect.</p>
+            <div id="ratingsContainer"></div>
+
+            <div id="quickQuestionsArea"></div>
+
+            <div class="rating-group">
+                <div class="rating-label" id="recommendLabel">🤝 ለሌሎች ይመክሩናል? / Would you recommend us?</div>
+                <div id="recommendRadios"></div>
+            </div>
+
+            <div class="rating-group">
+                <div class="rating-label" id="commentLabel">💬 ተጨማሪ አስተያየት (አማራጭ) / Additional feedback</div>
+                <textarea rows="3" id="commentBox" placeholder="ሀሳብ ወይም ልምድዎን ያካፍሉን። Share your thoughts..."></textarea>
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn-secondary" id="saveContinueLaterBtn"><i class="fas fa-save"></i> <span id="saveBtnTxt">ቆጥብ / Save</span></button>
+                <button class="btn-primary" id="nextStepBtn"><span id="nextTxt">ቀጥል ➜ / Next</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Contact Info -->
+    <div class="step" id="step2">
+        <div class="card form-card">
+            <h3 id="step2Title">📬 መጨረሻ ላይ / Almost done!</h3>
+            <div class="rating-group"><label>ሙሉ ስም / Full name</label><input type="text" id="customerName" placeholder="e.g., አበበ በቀለ / Abebe Bekele"></div>
+            <div class="rating-group"><label>ኢሜይል / Email</label><input type="email" id="customerEmail" placeholder="name@company.com"></div>
+            <div class="rating-group"><label>ስልክ (አማራጭ) / Phone (optional)</label><input type="tel" id="customerPhone" placeholder="+251 ..."></div>
+            <div class="nav-buttons">
+                <button class="btn-secondary" id="prevStepBtn"><span id="prevTxt">← ተመለስ / Back</span></button>
+                <button class="btn-primary" id="submitSurveyBtn"><i class="fas fa-paper-plane"></i> <span id="submitTxt">አስገባ / Submit</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thank You -->
+    <div id="thankyouMessage" style="display: none;" class="card thankyou-message">
+        <i class="fas fa-check-circle" style="font-size: 3rem; color: #1b6b4c;"></i>
+        <h2 id="thankyouTitle">🙏 እናመሰግናለን! / Thank you!</h2>
+        <p id="thankyouText">አስተያየትዎ ከፍተኛ ጠቀሜታ አለው። Your insights drive us forward.</p>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div class="admin-section" id="adminDashboard">
+        <div class="admin-header"><h3><i class="fas fa-chart-line"></i> <span id="adminTitle">የአስተዳደር ውጤት / Admin Intelligence</span></h3><button class="btn-secondary" id="refreshDashboardBtn"><i class="fas fa-sync-alt"></i> አዘምን / Sync</button></div>
+        <div class="chart-row"><div><canvas id="categoryChart" height="200"></canvas><p style="text-align:center;">አማካይ ውጤት / Avg rating</p></div><div><canvas id="trendDonut" height="200"></canvas><p style="text-align:center;">ምክር / Recommendation</p></div></div>
+        <div id="kpiSummary" style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;"></div>
+        <h4>📋 የቅርብ ጊዜ ምላሾች / Recent responses</h4>
+        <div id="responsesList" style="max-height: 320px; overflow-y: auto;"></div>
+    </div>
+    <footer>🔒 ደህንነቱ የተጠበቀ | Secure & encrypted | © 2025 VoxPop</footer>
+</div>
+<div id="toastMsg" class="toast-msg">✅ ተከናውኗል / Done</div>
+
+<script>
+    // ======================= MULTI-LANGUAGE TRANSLATIONS =======================
+    const translations = {
+        am: {
+            heroTitle:"አገልግሎቱን የሰጠዎ ማን ነው?", heroDesc:"ልምድዎን ማካፈል ለተሻለ አገልግሎት ይረዳል።", step1Title:"⭐ የአገልግሎት ደረጃ", step1Sub:"እያንዳንዱን ገጽታ ደረጃ ይስጡ", staffProviderLabel:"🌾 አገልግሎቱን የሰጠዎ ማን ነው?", seatLabel:"🪑 የመቀመጫ ቁጥር (አማራጭ):", quickLabel:"ፈጣን ጥያቄዎች", recommendLabel:"🤝 ለሌሎች ይመክሩናል?", commentLabel:"💬 ተጨማሪ አስተያየት", saveBtnTxt:"ቆጥብ", nextTxt:"ቀጥል ➜", step2Title:"📬 መጨረሻ ላይ", prevTxt:"← ተመለስ", submitTxt:"አስገባ", thankyouTitle:"🙏 እናመሰግናለን!", thankyouText:"አስተያየትዎ ከፍተኛ ጠቀሜታ አለው።", adminTitle:"የአስተዳደር ውጤት", service:"የአገልግሎት ጥራት", staff:"የሰራተኞች ባህሪ", product:"የምርት እርካታ", delivery:"የማድረስ ልምድ", overall:"አጠቃላይ ልምድ", quickYes1:"ችግር በፍጥነት ተፈቷል?", quickYes2:"ቡድናችን ከጠበቅነው በላይ ሆኗል?", recommendOpt1:"✅ አዎ", recommendOpt2:"🤔 እርግጠኛ አይደለሁም", recommendOpt3:"❌ አይ"
+        },
+        en: {
+            heroTitle:" We Value Your Feedback", heroDesc:"Your insights help shape exceptional experiences.", step1Title:"⭐ Service & Experience Details", step1Sub:"Rate your satisfaction on each aspect.", staffProviderLabel:"🌾 Crop Development · Who provided you the service?", seatLabel:"🪑 Seat Number (optional):", quickLabel:"Quick questions", recommendLabel:"🤝 Would you recommend us to others?", commentLabel:"💬 Additional feedback (optional)", saveBtnTxt:"Save & continue later", nextTxt:"Next ➜", step2Title:"📬 Almost done!", prevTxt:"← Back", submitTxt:"Submit feedback", thankyouTitle:"🙏 Thank you for your time!", thankyouText:"Your insights empower us to deliver excellence.", adminTitle:"Admin Intelligence Hub", service:"Service Quality", staff:"Staff Behavior", product:"Product Satisfaction", delivery:"Delivery Experience", overall:"Overall Experience", quickYes1:"Was your issue resolved quickly?", quickYes2:"Did our team exceed expectations?", recommendOpt1:"✅ Yes, definitely", recommendOpt2:"🤔 Not sure", recommendOpt3:"❌ No"
+        },
+        fr: {
+            heroTitle:" Nous apprécions vos retours", heroDesc:"Vos commentaires nous aident à exceller.", step1Title:"⭐ Détails du service", step1Sub:"Évaluez votre satisfaction.", staffProviderLabel:"🌾 Développement des cultures · Qui vous a fourni le service ?", seatLabel:"🪑 Numéro de siège (optionnel):", quickLabel:"Questions rapides", recommendLabel:"🤝 Recommanderiez-vous nos services ?", commentLabel:"💬 Commentaires supplémentaires", saveBtnTxt:"Sauvegarder", nextTxt:"Suivant ➜", step2Title:"📬 Dernière étape", prevTxt:"← Retour", submitTxt:"Envoyer", thankyouTitle:"🙏 Merci !", thankyouText:"Votre avis compte énormément.", adminTitle:"Tableau de bord admin", service:"Qualité du service", staff:"Comportement équipe", product:"Satisfaction produit", delivery:"Expédition", overall:"Expérience globale", quickYes1:"Problème résolu rapidement ?", quickYes2:"L'équipe a dépassé vos attentes ?", recommendOpt1:"✅ Oui", recommendOpt2:"🤔 Peut-être", recommendOpt3:"❌ Non"
+        }
+    };
+
+    // Staff list with avatar icons
+    const staffList = [
+        { name: "Addisu Dabale Gonfa", title: "Desk Head", icon: "👨‍🌾", seatPlaceholder: "SEAT #" },
+        { name: "Bezu Yicheneku", title: "Desk Head", icon: "👩‍🌾", seatPlaceholder: "SEAT #" },
+        { name: "Teshome Geletu", title: "Lead Executive", icon: "👨‍💼", seatPlaceholder: "SEAT #" },
+        { name: "Esayas Lemma Hayi", title: "Lead Executive", icon: "👨‍🔬", seatPlaceholder: "SEAT #" },
+        { name: "Fisseha Tolosa Haile", title: "Desk Head", icon: "👨‍🏫", seatPlaceholder: "SEAT #" }
+    ];
+
+    // Survey data
+    let surveyAnswers = {
+        ratings: { service:0, staff:0, product:0, delivery:0, overall:0 },
+        quickQuestions: { q1:"", q2:"" },
+        recommendation: "",
+        comment: "",
+        selectedStaff: null,
+        seatNumber: "",
+        contact: { name:"", email:"", phone:"" }
+    };
+
+    let currentStep = 1;
+    let ratingCategories = ['service','staff','product','delivery','overall'];
+    let quickQuestionsList = ['q1','q2'];
+    let allResponses = [];
+
+    // LocalStorage
+    function loadLocalStorageData() {
+        const saved = localStorage.getItem('voxpop_survey_draft');
+        if(saved) { try { Object.assign(surveyAnswers, JSON.parse(saved)); } catch(e){} }
+        const storedResponses = localStorage.getItem('voxpop_submissions');
+        if(storedResponses) allResponses = JSON.parse(storedResponses);
+        else {
+            allResponses = [
+                { id: Date.now()+1, ratings:{service:5,staff:4,product:5,delivery:4,overall:5}, quickQuestions:{q1:"Yes",q2:"Yes"}, recommendation:"Yes", comment:"Excellent!", selectedStaff:"Addisu Dabale Gonfa", seatNumber:"12", contact:{name:"Alemitu B", email:"alem@example.com"}, timestamp:new Date().toISOString() },
+                { id: Date.now()+2, ratings:{service:3,staff:2,product:4,delivery:3,overall:3}, quickQuestions:{q1:"No",q2:"No"}, recommendation:"No", comment:"Delivery slow", selectedStaff:"Teshome Geletu", seatNumber:"07", contact:{name:"Biruk K", email:"biruk@example.com"}, timestamp:new Date().toISOString() }
+            ];
+            localStorage.setItem('voxpop_submissions', JSON.stringify(allResponses));
+        }
+    }
+    function saveDraftToLocal() { localStorage.setItem('voxpop_survey_draft', JSON.stringify(surveyAnswers)); }
+
+    // Render staff selection with avatars
+    function renderStaffSelection() {
+        const container = document.getElementById('staffGrid');
+        if(!container) return;
+        container.innerHTML = '';
+        staffList.forEach(staff => {
+            const isChecked = (surveyAnswers.selectedStaff === staff.name);
+            const card = document.createElement('div');
+            card.className = `staff-card ${isChecked ? 'selected' : ''}`;
+            card.innerHTML = `
+                <input type="radio" name="staffRadio" value="${staff.name}" id="staff_${staff.name.replace(/\s/g,'')}" ${isChecked ? 'checked' : ''}>
+                <div class="staff-avatar"><i class="fas fa-user-circle fa-3x"></i> ${staff.icon}</div>
+                <div class="staff-name">${staff.name}</div>
+                <div class="staff-title">${staff.title}</div>
+                <div class="seat-field"><i class="fas fa-chair"></i> <span>${staff.seatPlaceholder}</span></div>
+            `;
+            card.addEventListener('click', (e) => {
+                if(e.target.tagName !== 'INPUT') {
+                    const radio = card.querySelector('input');
+                    radio.checked = true;
+                    surveyAnswers.selectedStaff = staff.name;
+                    saveDraftToLocal();
+                    renderStaffSelection();
+                }
+            });
+            container.appendChild(card);
+        });
+        const seatInput = document.getElementById('seatNumberInput');
+        if(seatInput) {
+            seatInput.value = surveyAnswers.seatNumber || '';
+            seatInput.addEventListener('input', (e) => { surveyAnswers.seatNumber = e.target.value; saveDraftToLocal(); });
+        }
+    }
+
+    // Rating stars, quick questions, recommendation (same as before, but with language)
+    function renderRatingsUI() {
+        const container = document.getElementById('ratingsContainer');
+        if(!container) return;
+        const lang = document.getElementById('languageSelect').value;
+        const t = translations[lang];
+        container.innerHTML = '';
+        ratingCategories.forEach(cat => {
+            const val = surveyAnswers.ratings[cat];
+            const labelText = t[cat] || cat;
+            const starsDiv = document.createElement('div'); starsDiv.className = 'rating-group';
+            starsDiv.innerHTML = `<div class="rating-label">${labelText}</div><div class="stars" data-category="${cat}">${[1,2,3,4,5].map(s => `<i class="fa-regular fa-star" data-star="${s}"></i>`).join('')}</div>`;
+            container.appendChild(starsDiv);
+            const starContainer = starsDiv.querySelector('.stars');
+            for(let i=0;i<5;i++) {
+                const starEl = starContainer.children[i];
+                if(i < val) starEl.classList.add('active');
+                else starEl.classList.remove('active');
+                starEl.classList.remove('fa-regular','fa-solid');
+                if(i < val) starEl.classList.add('fas','fa-star','active');
+                else starEl.classList.add('far','fa-star');
+            }
+            starContainer.querySelectorAll('i').forEach(star => {
+                star.addEventListener('click', (e) => {
+                    const starVal = parseInt(star.dataset.star);
+                    surveyAnswers.ratings[cat] = starVal;
+                    saveDraftToLocal();
+                    renderRatingsUI();
+                });
+            });
+        });
+    }
+
+    function renderQuickYesNo() {
+        const container = document.getElementById('quickQuestionsArea');
+        if(!container) return;
+        const lang = document.getElementById('languageSelect').value;
+        const t = translations[lang];
+        const questions = [t.quickYes1, t.quickYes2];
+        container.innerHTML = '';
+        quickQuestionsList.forEach((q, idx) => {
+            const currentVal = surveyAnswers.quickQuestions[q] || "";
+            const div = document.createElement('div'); div.style.marginBottom='16px';
+            div.innerHTML = `<div style="font-weight:500; margin-bottom:6px;">${questions[idx]}</div>
+            <div class="yesno-group"><label class="yesno-option"><input type="radio" name="q${idx}" value="Yes" ${currentVal==='Yes'?'checked':''}> <span>✅ Yes</span></label>
+            <label class="yesno-option"><input type="radio" name="q${idx}" value="No" ${currentVal==='No'?'checked':''}> <span>❌ No</span></label></div>`;
+            container.appendChild(div);
+            div.querySelectorAll('input').forEach(r => r.addEventListener('change', (e) => { surveyAnswers.quickQuestions[q] = e.target.value; saveDraftToLocal(); }));
+        });
+    }
+
+    function renderRecommendation() {
+        const container = document.getElementById('recommendRadios');
+        if(!container) return;
+        const lang = document.getElementById('languageSelect').value;
+        const t = translations[lang];
+        const options = [t.recommendOpt1, t.recommendOpt2, t.recommendOpt3];
+        const val = surveyAnswers.recommendation;
+        container.innerHTML = `<div class="yesno-group">${options.map((opt,i)=>`<label class="yesno-option"><input type="radio" name="recommend" value="${['Yes','Maybe','No'][i]}" ${val===['Yes','Maybe','No'][i]?'checked':''}> ${opt}</label>`).join('')}</div>`;
+        container.querySelectorAll('input').forEach(r => r.addEventListener('change', (e) => { surveyAnswers.recommendation = e.target.value; saveDraftToLocal(); }));
+    }
+
+    function updateStepUI() {
+        document.querySelectorAll('.step').forEach((step, idx) => { if(idx+1 === currentStep) step.classList.add('active-step'); else step.classList.remove('active-step'); });
+        document.getElementById('progressFill').style.width = (currentStep === 1 ? '50%' : '100%');
+        document.getElementById('stepIndicator').innerText = `Step ${currentStep} of 2`;
+    }
+
+    function applyLanguage() {
+        const lang = document.getElementById('languageSelect').value;
+        const t = translations[lang];
+        if(t){
+            document.getElementById('heroTitle').innerText = t.heroTitle;
+            document.getElementById('heroDesc').innerText = t.heroDesc;
+            document.getElementById('step1Title').innerText = t.step1Title;
+            document.getElementById('step1Sub').innerText = t.step1Sub;
+            document.getElementById('staffProviderLabel').innerHTML = t.staffProviderLabel;
+            document.getElementById('seatLabel').innerHTML = t.seatLabel;
+            document.getElementById('recommendLabel').innerHTML = t.recommendLabel;
+            document.getElementById('commentLabel').innerHTML = t.commentLabel;
+            document.getElementById('saveBtnTxt').innerHTML = t.saveBtnTxt;
+            document.getElementById('nextTxt').innerHTML = t.nextTxt;
+            document.getElementById('step2Title').innerHTML = t.step2Title;
+            document.getElementById('prevTxt').innerHTML = t.prevTxt;
+            document.getElementById('submitTxt').innerHTML = t.submitTxt;
+            document.getElementById('thankyouTitle').innerHTML = t.thankyouTitle;
+            document.getElementById('thankyouText').innerHTML = t.thankyouText;
+            document.getElementById('adminTitle').innerHTML = t.adminTitle;
+        }
+        renderRatingsUI(); renderStaffSelection(); renderQuickYesNo(); renderRecommendation();
+    }
+
+    // Admin charts
+    let categoryChart, donutChart;
+    function updateAdminDashboard() {
+        const responses = allResponses;
+        const avgRatings = { service:0, staff:0, product:0, delivery:0, overall:0 };
+        let recCount = { Yes:0, Maybe:0, No:0 };
+        responses.forEach(r => {
+            Object.keys(avgRatings).forEach(c => avgRatings[c] += r.ratings[c] || 0);
+            if(r.recommendation) recCount[r.recommendation] = (recCount[r.recommendation]||0)+1;
+        });
+        const total = responses.length || 1;
+        Object.keys(avgRatings).forEach(c => avgRatings[c] = +(avgRatings[c]/total).toFixed(1));
+        const ctxCat = document.getElementById('categoryChart').getContext('2d');
+        if(categoryChart) categoryChart.destroy();
+        categoryChart = new Chart(ctxCat, { type:'bar', data:{ labels:['Service','Staff','Product','Delivery','Overall'], datasets:[{ label:'Avg rating', data:[avgRatings.service, avgRatings.staff, avgRatings.product, avgRatings.delivery, avgRatings.overall], backgroundColor:'#2c9b62' }] }, options:{ responsive:true } });
+        const ctxDonut = document.getElementById('trendDonut').getContext('2d');
+        if(donutChart) donutChart.destroy();
+        donutChart = new Chart(ctxDonut, { type:'doughnut', data:{ labels:['Positive','Neutral','Negative'], datasets:[{ data:[recCount.Yes||0, recCount.Maybe||0, recCount.No||0], backgroundColor:['#1f6e43','#f4b942','#e26d5c'] }] } });
+        document.getElementById('kpiSummary').innerHTML = `<div class="card" style="padding:12px 20px;">📊 ጠቅላላ ምላሾች / Total: ${total}</div><div class="card" style="padding:12px 20px;">⭐ አጠቃላይ እርካታ / Overall: ${avgRatings.overall}/5</div><div class="card" style="padding:12px 20px;">🏆 የምክር መጠን / Recommend: ${((recCount.Yes/total)*100).toFixed(0)}%</div>`;
+        const respDiv = document.getElementById('responsesList');
+        respDiv.innerHTML = responses.slice().reverse().map(r => `<div class="response-item"><strong>${r.contact.name || 'Anonymous'}</strong> · ${new Date(r.timestamp).toLocaleString()} <br/> ⭐ ${r.ratings.overall}/5 · አገልግሎት ሰጪ: ${r.selectedStaff || '—'} (ወንበር/Seat: ${r.seatNumber || '—'}) · "${r.comment?.substring(0,60)}" · ምክር: ${r.recommendation}</div>`).join('');
+    }
+
+    function addNewSubmission(submission) {
+        allResponses.unshift({ ...submission, id: Date.now(), timestamp: new Date().toISOString() });
+        localStorage.setItem('voxpop_submissions', JSON.stringify(allResponses));
+        updateAdminDashboard();
+        alert("📧 [Demo] ምላሽ ተቀብሏል / Response received. Email notification would be sent.");
+    }
+
+    function submitFinal() {
+        if(!surveyAnswers.selectedStaff) { alert("እባክዎ አገልግሎት ሰጪዎን ይምረጡ / Please select a service provider."); return; }
+        const finalData = {
+            ratings: {...surveyAnswers.ratings},
+            quickQuestions: {...surveyAnswers.quickQuestions},
+            recommendation: surveyAnswers.recommendation,
+            comment: document.getElementById('commentBox').value,
+            selectedStaff: surveyAnswers.selectedStaff,
+            seatNumber: document.getElementById('seatNumberInput').value,
+            contact: { name:document.getElementById('customerName').value, email:document.getElementById('customerEmail').value, phone:document.getElementById('customerPhone').value }
+        };
+        addNewSubmission(finalData);
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('step2').style.display = 'none';
+        document.getElementById('thankyouMessage').style.display = 'block';
+        document.getElementById('adminDashboard').scrollIntoView({ behavior: 'smooth' });
+        localStorage.removeItem('voxpop_survey_draft');
+    }
+
+    // Event listeners
+    document.getElementById('saveContinueLaterBtn').addEventListener('click', () => { saveDraftToLocal(); showToast("💾 ተቀምጧል / Saved locally"); });
+    document.getElementById('nextStepBtn').addEventListener('click', () => { if(currentStep===1){ currentStep=2; updateStepUI(); } });
+    document.getElementById('prevStepBtn').addEventListener('click', () => { if(currentStep===2){ currentStep=1; updateStepUI(); } });
+    document.getElementById('submitSurveyBtn').addEventListener('click', submitFinal);
+    document.getElementById('languageSelect').addEventListener('change', () => applyLanguage());
+    document.getElementById('copyLinkBtn').addEventListener('click', () => { navigator.clipboard.writeText(window.location.href); showToast("🔗 ሊንክ ተቀድቷል / Link copied"); });
+    document.getElementById('twitterShare').onclick = () => window.open(`https://twitter.com/intent/tweet?text=Share%20your%20feedback&url=${encodeURIComponent(window.location.href)}`);
+    document.getElementById('facebookShare').onclick = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`);
+    document.getElementById('linkedinShare').onclick = () => window.open(`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(window.location.href)}`);
+    document.getElementById('refreshDashboardBtn').addEventListener('click', () => updateAdminDashboard());
+    function showToast(msg) { const toast=document.getElementById('toastMsg'); toast.innerText=msg; toast.style.opacity='1'; setTimeout(()=>toast.style.opacity='0',2500); }
+
+    // Load draft
+    function loadDraftIntoUI() {
+        const saved = localStorage.getItem('voxpop_survey_draft');
+        if(saved){
+            try{
+                const draft = JSON.parse(saved);
+                surveyAnswers = draft;
+                document.getElementById('commentBox').value = surveyAnswers.comment || '';
+                document.getElementById('customerName').value = surveyAnswers.contact?.name || '';
+                document.getElementById('customerEmail').value = surveyAnswers.contact?.email || '';
+                document.getElementById('customerPhone').value = surveyAnswers.contact?.phone || '';
+                if(surveyAnswers.seatNumber) document.getElementById('seatNumberInput').value = surveyAnswers.seatNumber;
+                renderRatingsUI(); renderStaffSelection(); renderQuickYesNo(); renderRecommendation();
+            }catch(e){}
+        }
+    }
+
+    // QR code
+    const qrImg = document.getElementById('qrCodeImg');
+    qrImg.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(window.location.href)}" alt="QR Code" style="width:70px;">`;
+
+    // Initialize
+    loadLocalStorageData();
+    loadDraftIntoUI();
+    applyLanguage();
+    updateStepUI();
+    updateAdminDashboard();
+    document.getElementById('commentBox').addEventListener('input', (e) => { surveyAnswers.comment = e.target.value; saveDraftToLocal(); });
+    ['customerName','customerEmail','customerPhone'].forEach(id => { document.getElementById(id)?.addEventListener('input', (e) => { surveyAnswers.contact = surveyAnswers.contact || {}; surveyAnswers.contact[id.replace('customer','').toLowerCase()] = e.target.value; saveDraftToLocal(); }); });
+</script>
+</body>
+</html>

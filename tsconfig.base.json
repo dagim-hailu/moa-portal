@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "ignoreDeprecations": "5.0",
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@moa/shared/*": ["packages/shared/src/*"],
+      "@moa/dms": ["apps/dms/src/index.ts"],
+      "@moa/dms/*": ["apps/dms/src/*"]
+    },
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true
+  }
+}

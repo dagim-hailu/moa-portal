@@ -1,0 +1,20 @@
+{
+  "portal.name": "Ministry of Agriculture Portal",
+  "portal.subtitle": "Digital Workspace",
+  "nav.dashboard": "Dashboard",
+  "nav.settings": "Settings",
+  "nav.signOut": "Sign out",
+  "auth.email": "Email or Staff ID",
+  "auth.password": "Password",
+  "auth.signIn": "Sign In",
+  "auth.invalid": "Invalid credentials",
+  "auth.forgot": "Forgot password?",
+  "sidebar.empty": "No applications assigned. Contact your administrator.",
+  "admin.title": "Admin Console",
+  "admin.register": "Register New Application",
+  "dms.title": "Document Management",
+  "error.403": "Access Denied",
+  "error.404": "Page Not Found",
+  "common.dashboard": "Go to Dashboard",
+  "common.search": "Search across applications..."
+}

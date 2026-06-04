@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": false,
+    "noEmit": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "components/*": ["./src/au-free/components/*"],
+      "layouts/*": ["./src/au-free/layouts/*"],
+      "lib/*": ["./src/au-free/lib/*"],
+      "providers/*": ["./src/au-free/providers/*"],
+      "routes/*": ["./src/au-free/routes/*"],
+      "theme/*": ["./src/au-free/theme/*"],
+      "data/*": ["./src/au-free/data/*"],
+      "pages/*": ["./src/au-free/pages/*"],
+      "types/*": ["./src/au-free/types/*"],
+      "helpers/*": ["./src/au-free/helpers/*"],
+      "reducers/*": ["./src/au-free/reducers/*"],
+      "hooks/*": ["./src/au-free/hooks/*"],
+      "config": ["./src/au-free/config.ts"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "src",
+    "middleware.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

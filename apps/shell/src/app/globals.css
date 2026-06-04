@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-green: #2ea354;
+    --primary-hover: #228241;
+    --accent-green: #89a87d;
+    --bg-main: #f3f4f6;
+    --bg-secondary: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --card-bg: #ffffff;
+    --nav-bg: rgba(243, 244, 246, 0.85);
+    --border-color: #e2e8f0;
+    --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.05);
+    --shadow-md: 0 10px 30px rgba(0,0,0,0.08);
+    --shadow-lg: 0 20px 40px rgba(0,0,0,0.12);
+    --modal-overlay: rgba(15, 23, 42, 0.4);
+    --transition-speed: 0.3s;
+
+    --font-sans: var(--font-plus-jakarta), var(--font-noto-ethiopic), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+    
+    /* Keep existing variables for compatibility if needed */
+    --portal-bg: var(--bg-main);
+    --portal-bg-secondary: var(--bg-secondary);
+    --portal-card: var(--card-bg);
+    --portal-nav: var(--nav-bg);
+  }
+
+  [data-theme="dark"], .dark {
+    --primary-green: #34d399;
+    --primary-hover: #10b981;
+    --accent-green: #4ade80;
+    --bg-main: #0f172a;
+    --bg-secondary: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --card-bg: #1e293b;
+    --nav-bg: rgba(15, 23, 42, 0.85);
+    --border-color: #334155;
+    --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.2);
+    --shadow-md: 0 10px 30px rgba(0,0,0,0.4);
+    --shadow-lg: 0 20px 40px rgba(0,0,0,0.6);
+    --modal-overlay: rgba(0, 0, 0, 0.7);
+
+    --portal-bg: var(--bg-main);
+    --portal-bg-secondary: var(--bg-secondary);
+    --portal-card: var(--card-bg);
+    --portal-nav: var(--nav-bg);
+  }
+
+  * {
+    @apply border-[var(--border-color)];
+    transition: background-color var(--transition-speed), color var(--transition-speed), border-color var(--transition-speed);
+  }
+
+  body {
+    @apply bg-[var(--bg-main)] text-[var(--text-main)] antialiased;
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  .amharic {
+    line-height: 1.6;
+  }
+}
+
+@layer utilities {
+  .animate-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .scroll-hidden {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .scroll-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .portal-card {
+    @apply rounded-3xl border border-[var(--border-color)] bg-[var(--card-bg)] shadow-md;
+  }
+
+  .btn-portal {
+    @apply inline-flex items-center justify-center rounded-full bg-[var(--primary-green)] px-8 py-3 text-button font-semibold text-white shadow-md transition hover:bg-[var(--primary-hover)] active:scale-[0.98];
+  }
+
+  .btn-portal-outline {
+    @apply inline-flex items-center justify-center rounded-full border-2 border-[var(--border-color)] bg-transparent px-6 py-2.5 text-button font-semibold text-[var(--text-main)] transition hover:border-[var(--primary-green)] hover:bg-[var(--primary-green)] hover:text-white;
+  }
+}

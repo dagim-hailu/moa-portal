@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>EthioHeritage | National Holidays & Festivals CMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1f6e43;
+            --primary-dark: #0e4f2f;
+            --primary-light: #eafaf2;
+            --accent: #e6b422;
+            --accent-glow: #f5c542;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-400: #cbd5e1;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+            --white: #ffffff;
+            --shadow-sm: 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+            --shadow-md: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 20px 35px -12px rgba(0, 0, 0, 0.2);
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+            --transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        [data-theme="dark"] {
+            --primary: #3b9b6e;
+            --primary-dark: #2a7c54;
+            --gray-50: #0f172a;
+            --gray-100: #1e293b;
+            --gray-200: #334155;
+            --gray-400: #64748b;
+            --gray-600: #cbd5e1;
+            --gray-800: #f1f5f9;
+            --white: #1e293b;
+            --shadow-sm: 0 4px 6px -2px rgba(0, 0, 0, 0.5);
+            --shadow-md: 0 12px 24px -8px rgba(0, 0, 0, 0.6);
+            --shadow-lg: 0 20px 35px -12px rgba(0, 0, 0, 0.8);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            transition: var(--transition);
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 0.8rem 5%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: var(--shadow-sm);
+        }
+        [data-theme="dark"] .glass-nav {
+            background: rgba(30, 41, 59, 0.85);
+        }
+        .logo {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-buttons { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+        .view-toggle {
+            background: var(--gray-100);
+            border-radius: 60px;
+            display: flex;
+            padding: 4px;
+            gap: 4px;
+        }
+        .view-btn {
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-weight: 600;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--gray-600);
+            transition: var(--transition);
+        }
+        .view-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+        .theme-toggle {
+            background: var(--gray-100);
+            border: none;
+            padding: 8px 18px;
+            border-radius: 60px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        .theme-toggle:hover {
+            transform: scale(1.03);
+            background: var(--gray-200);
+        }
+        .container { max-width: 1440px; margin: 0 auto; padding: 2rem 5%; }
+        
+        .holiday-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .holiday-card {
+            background: var(--white);
+            border-radius: var(--radius-2xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            border: 1px solid var(--gray-200);
+            animation: fadeInUp 0.5s ease-out backwards;
+        }
+        .holiday-card:nth-child(1) { animation-delay: 0.05s; }
+        .holiday-card:nth-child(2) { animation-delay: 0.1s; }
+        .holiday-card:nth-child(3) { animation-delay: 0.15s; }
+        .holiday-card:nth-child(4) { animation-delay: 0.2s; }
+        .holiday-card:hover {
+            transform: translateY(-8px) scale(1.01);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-light);
+        }
+        .card-img {
+            height: 220px;
+            width: 100%;
+            object-fit: cover;
+            background: var(--gray-200);
+            transition: transform 0.5s ease;
+        }
+        .holiday-card:hover .card-img {
+            transform: scale(1.02);
+        }
+        .card-body { padding: 1.5rem; }
+        .badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: 0.3px;
+        }
+        .badge-religious { background: #e9d8fd; color: #6b21a5; }
+        .badge-national { background: #fed7aa; color: #9a3412; }
+        .badge-cultural { background: #b8f5e0; color: #0b5e42; }
+        .admin-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            border-top: 1px solid var(--gray-200);
+            padding-top: 1rem;
+        }
+        .btn-icon {
+            background: var(--gray-100);
+            border: none;
+            padding: 8px 14px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-icon:hover {
+            background: var(--gray-200);
+            transform: translateY(-2px);
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+            margin-right: 8px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--gray-400);
+            transition: 0.2s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        
+        .stats-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            padding: 1.2rem 1.8rem;
+            flex: 1;
+            min-width: 150px;
+            border: 1px solid var(--gray-200);
+            font-weight: 500;
+            transition: var(--transition);
+            backdrop-filter: blur(4px);
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content {
+            background: var(--white);
+            max-width: 680px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            border-radius: 36px;
+            padding: 2rem;
+            animation: fadeInUp 0.3s ease;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { font-weight: 600; display: block; margin-bottom: 6px; }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            border: 1.5px solid var(--gray-200);
+            background: var(--gray-50);
+            color: var(--gray-800);
+            transition: 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(31, 110, 67, 0.2);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 28px;
+            border-radius: 60px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        .search-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .search-filter input, .search-filter select {
+            flex: 1;
+            min-width: 160px;
+        }
+        footer {
+            background: var(--white);
+            border-top: 1px solid var(--gray-200);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
+        .active-now-badge {
+            background: var(--accent);
+            color: #2c2b2b;
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            border-radius: 30px;
+            display: inline-block;
+            margin-left: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.7; transform: scale(0.98);}
+            50% { opacity: 1; transform: scale(1.02); background: #f5c542;}
+            100% { opacity: 0.7; transform: scale(0.98);}
+        }
+        .hero-gradient {
+            background: linear-gradient(125deg, var(--primary-light) 0%, var(--white) 70%);
+            padding: 2rem 2rem;
+            border-radius: 48px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s;
+        }
+        [data-theme="dark"] .hero-gradient {
+            background: linear-gradient(125deg, #1e2a3a 0%, var(--white) 100%);
+        }
+        .scroll-top {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 60px;
+            width: 48px;
+            height: 48px;
+            font-size: 1.4rem;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-md);
+            z-index: 99;
+        }
+        .scroll-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .scroll-top:hover {
+            transform: translateY(-5px);
+            background: var(--primary-dark);
+        }
+        .image-preview {
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            border-radius: 20px;
+            margin-top: 8px;
+            border: 1px solid var(--gray-200);
+        }
+        .file-input-label {
+            background: var(--gray-100);
+            padding: 10px 16px;
+            border-radius: 60px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        .file-input-label:hover {
+            background: var(--gray-200);
+        }
+        input[type="file"] { display: none; }
+        @media (max-width: 700px) {
+            .container { padding: 1rem; }
+            .holiday-grid { grid-template-columns: 1fr; }
+            .glass-nav { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+<nav class="glass-nav">
+    <div class="logo"></i>MoA</div>
+    <div class="nav-buttons">
+        <div class="view-toggle">
+            <button class="view-btn" data-view="public">✨ Public Page</button>
+            <button class="view-btn" data-view="admin">🛡️ Admin Dashboard</button>
+        </div>
+        <button class="theme-toggle" id="darkToggle"><i class="fas fa-moon"></i> Theme</button>
+    </div>
+</nav>
+<div class="container" id="appRoot"></div>
+<button class="scroll-top" id="scrollTopBtn"><i class="fas fa-arrow-up"></i></button>
+<footer><p>© 2025 Ethiopian Heritage Authority — Preserving sacred seasons & cultural unity</p></footer>
+
+<script>
+    // ----------------------------- DATA & GLOBAL STATE ---------------------------------
+    let holidays = [];
+    let currentView = "public";
+    let userLikes = JSON.parse(localStorage.getItem("userLikes") || "{}");
+    let userSaves = JSON.parse(localStorage.getItem("userSaves") || "{}");
+    
+    let publicFilters = { search: "", category: "all", month: "all" };
+    let adminFilters = { search: "", category: "all" };
+
+    const defaultHolidays = [
+        { id: "1", titleAm: "ገና (ልደተ እግዚእነ)", titleEn: "Genna (Ethiopian Christmas)", descAm: "የኢትዮጵያ ቤተ ክርስቲያን የጌታችን ልደት በዓል በታላቅ ደስታ ይከበራል። ባህላዊ ጨወታ እና ቅዳሴ።", descEn: "Celebration of the birth of Christ with traditional Genna game and liturgy.", category: "Religious", imageUrl: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=500&h=300&fit=crop", startDate: "2025-01-04", endDate: "2025-01-08", approved: true, active: true, postedBy: "Admin Tsegaye", createdAt: "2025-01-01", likeCount: 124 },
+        { id: "2", titleAm: "ጥምቀት (ቤተ እግዚአብሔር)", titleEn: "Timket (Epiphany)", descAm: "የጥምቀት በዓል የኢትዮጵያ ዋና በዓል ሲሆን የኢየሱስ ጥምቀት ይዘከራል።", descEn: "Timket celebrates the baptism of Jesus in the Jordan River, colorful processions.", category: "Religious", imageUrl: "https://images.unsplash.com/photo-1573837146490-d49a5e178cbb?w=500&h=300&fit=crop", startDate: "2025-01-15", endDate: "2025-01-20", approved: true, active: true, postedBy: "Admin Genet", createdAt: "2025-01-10", likeCount: 98 },
+        { id: "3", titleAm: "ዓደል ፊጥር (ዒድ)", titleEn: "Eid al-Fitr", descAm: "የረመዳን ጾም መጨረሻ የምስጋና በዓል።", descEn: "Festival of breaking the fast, prayers and charity.", category: "Cultural", imageUrl: "https://images.unsplash.com/photo-1565791380713-2bbaa7b0aa24?w=500&h=300&fit=crop", startDate: "2025-03-29", endDate: "2025-03-31", approved: true, active: true, postedBy: "Admin Fatima", createdAt: "2025-03-01", likeCount: 215 },
+        { id: "4", titleAm: "አዲስ ዓመት (እንቁጣጣሽ)", titleEn: "Enkutatash (Ethiopian New Year)", descAm: "የ2018 ዓ.ም መግቢያ፣ የበጋ በዓል በማርያም አበባ ይከበራል።", descEn: "Meskel flower blooms, marking the start of a new year.", category: "National", imageUrl: "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=500&h=300&fit=crop", startDate: "2025-09-11", endDate: "2025-09-12", approved: true, active: true, postedBy: "Admin Selam", createdAt: "2025-08-20", likeCount: 312 },
+        { id: "5", titleAm: "መስቀል (ማርያም)", titleEn: "Meskel (Finding of the True Cross)", descAm: "ደመራ በማብራት ታላቅ እምነት በዓል።", descEn: "Bonfires and festivities commemorate the discovery of the True Cross.", category: "Religious", imageUrl: "https://images.unsplash.com/photo-1508672019041-805d8da6edb5?w=500&h=300&fit=crop", startDate: "2025-09-26", endDate: "2025-09-27", approved: true, active: true, postedBy: "Admin Bezawit", createdAt: "2025-09-01", likeCount: 278 }
+    ];
+
+    function loadData() {
+        const stored = localStorage.getItem("holidaysData");
+        if(stored) { holidays = JSON.parse(stored); }
+        else { holidays = defaultHolidays; saveData(); }
+    }
+    function saveData() { localStorage.setItem("holidaysData", JSON.stringify(holidays)); }
+    function persistLikesSaves() {
+        localStorage.setItem("userLikes", JSON.stringify(userLikes));
+        localStorage.setItem("userSaves", JSON.stringify(userSaves));
+    }
+    function isDateActive(holiday) {
+        const today = new Date();
+        const start = new Date(holiday.startDate);
+        const end = new Date(holiday.endDate);
+        return today >= start && today <= end;
+    }
+
+    function toggleLike(holidayId) {
+        const holiday = holidays.find(h => h.id === holidayId);
+        if(!holiday) return;
+        if(userLikes[holidayId]) {
+            holiday.likeCount = Math.max(0, (holiday.likeCount || 0) - 1);
+            delete userLikes[holidayId];
+        } else {
+            holiday.likeCount = (holiday.likeCount || 0) + 1;
+            userLikes[holidayId] = true;
+        }
+        saveData();
+        persistLikesSaves();
+        reRenderCurrentView();
+    }
+    function toggleSave(holidayId) {
+        if(userSaves[holidayId]) delete userSaves[holidayId];
+        else userSaves[holidayId] = true;
+        persistLikesSaves();
+        reRenderCurrentView();
+        showToast("✨ Saved to your collection!");
+    }
+    function shareHoliday(id) {
+        const holiday = holidays.find(h => h.id === id);
+        if(holiday) {
+            navigator.clipboard?.writeText(`Check out ${holiday.titleEn} - Ethiopian Heritage celebration!`);
+            showToast(`🔗 "${holiday.titleEn}" link copied!`);
+        } else showToast("✨ Share this Ethiopian celebration!");
+    }
+    function showToast(msg) {
+        let toast = document.createElement('div');
+        toast.innerText = msg;
+        toast.style.position = 'fixed';
+        toast.style.bottom = '80px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.backgroundColor = 'var(--primary)';
+        toast.style.color = 'white';
+        toast.style.padding = '10px 20px';
+        toast.style.borderRadius = '60px';
+        toast.style.zIndex = '999';
+        toast.style.fontWeight = '500';
+        toast.style.boxShadow = 'var(--shadow-md)';
+        toast.style.animation = 'fadeInUp 0.3s ease';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
+    function reRenderCurrentView() {
+        if(currentView === "public") renderPublic();
+        else renderAdmin();
+    }
+
+    // ----------------------------- PUBLIC VIEW ---------------------------------
+    function renderPublic() {
+        const activePublicHolidays = holidays.filter(h => h.approved === true && h.active === true);
+        let filtered = [...activePublicHolidays];
+        if(publicFilters.category !== "all") filtered = filtered.filter(h => h.category === publicFilters.category);
+        if(publicFilters.month !== "all") {
+            const monthNum = parseInt(publicFilters.month);
+            filtered = filtered.filter(h => new Date(h.startDate).getMonth() === monthNum);
+        }
+        if(publicFilters.search.trim() !== "") {
+            const term = publicFilters.search.toLowerCase();
+            filtered = filtered.filter(h => h.titleEn.toLowerCase().includes(term) || h.titleAm.includes(term));
+        }
+        const stats = { total: activePublicHolidays.length, activeNow: activePublicHolidays.filter(h => isDateActive(h)).length };
+        const html = `
+            <div class="hero-gradient">
+                <h1 style="font-size: 2.2rem; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent;">✨ የኢትዮጵያ በዓላት · Festive Ethiopia</h1>
+                <p style="margin-top: 0.5rem;">Discover living heritage — sacred seasons, unity and traditions — <strong>${stats.activeNow} festivals currently ongoing</strong></p>
+            </div>
+            <div class="search-filter">
+                <input type="text" id="publicSearch" placeholder="🔍 Search holidays (Amharic/English)..." value="${escapeHtml(publicFilters.search)}" style="flex:2">
+                <select id="publicCategoryFilter">
+                    <option value="all" ${publicFilters.category === 'all' ? 'selected' : ''}>All Categories</option>
+                    <option value="Religious" ${publicFilters.category === 'Religious' ? 'selected' : ''}>Religious</option>
+                    <option value="National" ${publicFilters.category === 'National' ? 'selected' : ''}>National</option>
+                    <option value="Cultural" ${publicFilters.category === 'Cultural' ? 'selected' : ''}>Cultural</option>
+                </select>
+                <select id="publicMonthFilter">
+                    <option value="all" ${publicFilters.month === 'all' ? 'selected' : ''}>All months</option>
+                    ${[...Array(12)].map((_,i)=>`<option value="${i}" ${publicFilters.month === String(i) ? 'selected' : ''}>${new Date(0,i).toLocaleString('default',{month:'long'})}</option>`).join('')}
+                </select>
+            </div>
+            <div class="holiday-grid">
+                ${filtered.map(h => {
+                    const activeNowFlag = isDateActive(h);
+                    const likeCountDisplay = h.likeCount || 0;
+                    return `<div class="holiday-card">
+                        <img class="card-img" src="${h.imageUrl}" onerror="this.src='https://placehold.co/500x300?text=Ethiopian+Festival'">
+                        <div class="card-body">
+                            <span class="badge ${h.category === 'Religious' ? 'badge-religious' : (h.category === 'National' ? 'badge-national' : 'badge-cultural')}">${h.category} ${activeNowFlag ? '<span class="active-now-badge">🔥 Active Now</span>' : ''}</span>
+                            <h3>${escapeHtml(h.titleEn)} <span style="font-size:0.9rem; color: var(--gray-600);">${escapeHtml(h.titleAm)}</span></h3>
+                            <p style="margin: 0.5rem 0;">${escapeHtml(h.descEn)} <br><small>${escapeHtml(h.descAm)}</small></p>
+                            <div style="display: flex; justify-content: space-between; margin-top: 12px;">
+                                <div><i class="far fa-calendar-alt"></i> ${new Date(h.startDate).toLocaleDateString()} - ${new Date(h.endDate).toLocaleDateString()}</div>
+                                <div><i class="fas fa-heart like-icon" style="cursor:pointer; color:${userLikes[h.id] ? '#e03a3e' : 'gray'}" data-like-id="${h.id}"></i> <span class="like-count">${likeCountDisplay}</span></div>
+                            </div>
+                            <div style="margin-top:12px; display: flex; gap: 12px; flex-wrap:wrap;">
+                                <button class="btn-icon" data-share-id="${h.id}"><i class="fas fa-share-alt"></i> Share</button>
+                                <button class="btn-icon" data-save-id="${h.id}"><i class="fas fa-bookmark" style="color:${userSaves[h.id] ? '#e6b422' : 'inherit'}"></i> ${userSaves[h.id] ? 'Saved' : 'Save'}</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+            <div style="margin-top: 2rem; text-align:center; color:var(--gray-600);">✨ ${stats.total} honored heritage celebrations • ${stats.activeNow} currently active</div>
+        `;
+        document.getElementById('appRoot').innerHTML = html;
+        document.getElementById('publicSearch')?.addEventListener('input', (e) => { publicFilters.search = e.target.value; renderPublic(); });
+        document.getElementById('publicCategoryFilter')?.addEventListener('change', (e) => { publicFilters.category = e.target.value; renderPublic(); });
+        document.getElementById('publicMonthFilter')?.addEventListener('change', (e) => { publicFilters.month = e.target.value; renderPublic(); });
+        document.querySelectorAll('[data-like-id]').forEach(el => {
+            el.addEventListener('click', (e) => { e.stopPropagation(); toggleLike(el.getAttribute('data-like-id')); });
+        });
+        document.querySelectorAll('[data-share-id]').forEach(btn => {
+            btn.addEventListener('click', (e) => { shareHoliday(btn.getAttribute('data-share-id')); });
+        });
+        document.querySelectorAll('[data-save-id]').forEach(btn => {
+            btn.addEventListener('click', (e) => { toggleSave(btn.getAttribute('data-save-id')); });
+        });
+    }
+
+    // ----------------------------- ADMIN DASHBOARD ---------------------------------
+    function renderAdmin() {
+        let filtered = holidays.filter(h => {
+            if(adminFilters.category !== "all" && h.category !== adminFilters.category) return false;
+            if(adminFilters.search && !h.titleEn.toLowerCase().includes(adminFilters.search.toLowerCase()) && !h.titleAm.includes(adminFilters.search)) return false;
+            return true;
+        });
+        const totalHolidays = holidays.length;
+        const approvedCount = holidays.filter(h => h.approved).length;
+        const activeCount = holidays.filter(h => h.active && h.approved).length;
+        const categoryStats = holidays.reduce((acc, h) => { acc[h.category] = (acc[h.category]||0)+1; return acc; }, {});
+        const html = `
+            <div class="stats-grid">
+                <div class="stat-card"><i class="fas fa-calendar-week"></i> <strong>${totalHolidays}</strong> Total Posts</div>
+                <div class="stat-card"><i class="fas fa-check-circle"></i> <strong>${approvedCount}</strong> Approved</div>
+                <div class="stat-card"><i class="fas fa-eye"></i> <strong>${activeCount}</strong> Active (public visible)</div>
+                <div class="stat-card"><i class="fas fa-chart-pie"></i> ${Object.entries(categoryStats).map(([k,v])=>`${k}:${v}`).join(' · ')}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem">
+                <button id="newHolidayBtn" class="btn-primary"><i class="fas fa-plus"></i>  Add New Holiday</button>
+                <div class="search-filter" style="margin-bottom:0"><input id="adminSearch" placeholder="🔍 Search holiday..." value="${escapeHtml(adminFilters.search)}"><select id="adminCategoryFilter"><option value="all" ${adminFilters.category === 'all' ? 'selected' : ''}>All Categories</option><option value="Religious" ${adminFilters.category === 'Religious' ? 'selected' : ''}>Religious</option><option value="National" ${adminFilters.category === 'National' ? 'selected' : ''}>National</option><option value="Cultural" ${adminFilters.category === 'Cultural' ? 'selected' : ''}>Cultural</option></select></div>
+            </div>
+            <div class="holiday-grid">
+                ${filtered.map(h => `
+                    <div class="holiday-card" data-id="${h.id}">
+                        <img class="card-img" src="${h.imageUrl}" onerror="this.src='https://placehold.co/500x300?text=Holiday'">
+                        <div class="card-body">
+                            <div style="display:flex; justify-content:space-between"><span class="badge ${h.category === 'Religious' ? 'badge-religious' : (h.category === 'National' ? 'badge-national' : 'badge-cultural')}">${h.category}</span>
+                            <span style="font-size:0.7rem;">✍️ ${escapeHtml(h.postedBy)}</span></div>
+                            <h3>${escapeHtml(h.titleEn)} <span style="font-size:0.85rem;">(${escapeHtml(h.titleAm)})</span></h3>
+                            <p>📅 ${new Date(h.startDate).toLocaleDateString()} – ${new Date(h.endDate).toLocaleDateString()}</p>
+                            <div><strong>Approval:</strong> ${h.approved ? '✅ Approved' : '⏳ Pending Review'} &nbsp;| <strong>Status:</strong> ${h.active ? '🟢 Active' : '⚫ Inactive'}</div>
+                            <div><i class="fas fa-heart"></i> ${h.likeCount || 0} likes &nbsp; <i class="fas fa-bookmark"></i> ${Object.values(userSaves).filter(sid=>sid===h.id).length}</div>
+                            <div class="admin-actions">
+                                <label class="toggle-switch">Active <input type="checkbox" class="active-toggle" data-id="${h.id}" ${h.active ? 'checked' : ''}><span class="slider"></span></label>
+                                ${!h.approved ? `<button class="btn-icon approve-btn" data-id="${h.id}"><i class="fas fa-check-circle"></i> Approve</button>` : `<button class="btn-icon revoke-approve" data-id="${h.id}">⛔ Revoke</button>`}
+                                <button class="btn-icon edit-btn" data-id="${h.id}"><i class="fas fa-edit"></i> Edit</button>
+                                <button class="btn-icon delete-btn" data-id="${h.id}"><i class="fas fa-trash"></i> Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        document.getElementById('appRoot').innerHTML = html;
+        document.getElementById('newHolidayBtn')?.addEventListener('click', () => openHolidayModal());
+        document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', (e) => { openHolidayModal(btn.getAttribute('data-id')); }));
+        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', (e) => { if(confirm('Permanently delete this heritage?')) { const id = btn.getAttribute('data-id'); holidays = holidays.filter(h => h.id !== id); saveData(); renderAdmin(); } }));
+        document.querySelectorAll('.active-toggle').forEach(toggle => { toggle.addEventListener('change', (e) => { const id = toggle.getAttribute('data-id'); const holiday = holidays.find(h => h.id === id); if(holiday) { holiday.active = toggle.checked; saveData(); renderAdmin(); } }); });
+        document.querySelectorAll('.approve-btn').forEach(btn => btn.addEventListener('click', () => { const id = btn.getAttribute('data-id'); const h = holidays.find(h => h.id === id); if(h) { h.approved = true; saveData(); renderAdmin(); } }));
+        document.querySelectorAll('.revoke-approve').forEach(btn => btn.addEventListener('click', () => { const id = btn.getAttribute('data-id'); const h = holidays.find(h => h.id === id); if(h) { h.approved = false; saveData(); renderAdmin(); } }));
+        const adminSearchInput = document.getElementById('adminSearch');
+        const adminCatSelect = document.getElementById('adminCategoryFilter');
+        if(adminSearchInput) adminSearchInput.addEventListener('input', (e) => { adminFilters.search = e.target.value; renderAdmin(); });
+        if(adminCatSelect) adminCatSelect.addEventListener('change', (e) => { adminFilters.category = e.target.value; renderAdmin(); });
+    }
+
+    // ---------- MODAL WITH IMAGE UPLOAD (FILE INPUT + PREVIEW) ----------
+    function openHolidayModal(editId = null) {
+        const holiday = editId ? holidays.find(h => h.id === editId) : null;
+        const modalDiv = document.createElement('div'); modalDiv.className = 'modal'; modalDiv.id = 'dynamicModal';
+        const existingImage = holiday ? (holiday.imageUrl || '') : '';
+        modalDiv.innerHTML = `
+            <div class="modal-content">
+                <h2>${holiday ? '✏️ Edit Sacred Post' : '🌟 Create New Holiday'}</h2>
+                <div class="form-group"><label>Title (English) *</label><input id="modTitleEn" value="${holiday ? escapeHtml(holiday.titleEn) : ''}"></div>
+                <div class="form-group"><label>Title (Amharic)</label><input id="modTitleAm" value="${holiday ? escapeHtml(holiday.titleAm) : ''}"></div>
+                <div class="form-group"><label>Description EN *</label><textarea id="modDescEn" rows="2">${holiday ? escapeHtml(holiday.descEn) : ''}</textarea></div>
+                <div class="form-group"><label>Description AM</label><textarea id="modDescAm" rows="2">${holiday ? escapeHtml(holiday.descAm) : ''}</textarea></div>
+                <div class="form-group"><label>Category</label><select id="modCategory"><option ${holiday?.category === 'Religious' ? 'selected' : ''}>Religious</option><option ${holiday?.category === 'National' ? 'selected' : ''}>National</option><option ${holiday?.category === 'Cultural' ? 'selected' : ''}>Cultural</option></select></div>
+                <div class="form-group">
+                    <label>Holiday Image</label>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <label class="file-input-label"><i class="fas fa-cloud-upload-alt"></i> Upload Image</label>
+                        <input type="file" id="imageUploadInput" accept="image/jpeg, image/png, image/webp, image/gif">
+                        <span style="font-size:0.8rem;">or paste URL below</span>
+                    </div>
+                    <input type="text" id="modImage" placeholder="Image URL (https://... or base64 will be auto-filled)" value="${escapeHtml(existingImage)}">
+                    <div id="imagePreviewContainer" style="margin-top: 10px;">
+                        ${existingImage ? `<img src="${escapeHtml(existingImage)}" class="image-preview" id="liveImagePreview" onerror="this.style.display='none'">` : '<img class="image-preview" id="liveImagePreview" style="display:none;">'}
+                    </div>
+                </div>
+                <div class="form-group"><label>Start Date *</label><input type="date" id="modStart" value="${holiday ? holiday.startDate : ''}" required></div>
+                <div class="form-group"><label>End Date *</label><input type="date" id="modEnd" value="${holiday ? holiday.endDate : ''}" required></div>
+                <div class="form-group"><label>Posted By (Creator)</label><input id="modPostedBy" value="${holiday ? escapeHtml(holiday.postedBy) : 'Admin'}"></div>
+                <div style="display:flex; gap:1rem; justify-content:flex-end"><button id="modalCancel" class="btn-icon">Cancel</button><button id="modalSave" class="btn-primary">Save Post</button></div>
+            </div>
+        `;
+        document.body.appendChild(modalDiv);
+        modalDiv.style.display = 'flex';
+
+        const imgUrlInput = document.getElementById('modImage');
+        const previewImg = document.getElementById('liveImagePreview');
+        const fileInput = document.getElementById('imageUploadInput');
+        
+        // Function to update preview
+        const updatePreview = (src) => {
+            if(src && src.trim() !== '') {
+                previewImg.src = src;
+                previewImg.style.display = 'block';
+            } else {
+                previewImg.style.display = 'none';
+            }
+        };
+        
+        // initial preview
+        updatePreview(imgUrlInput.value);
+        
+        // on URL change manually
+        imgUrlInput.addEventListener('input', (e) => { updatePreview(e.target.value); });
+        
+        // File upload handler: convert to base64 and set into URL field
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            if(!file.type.startsWith('image/')) {
+                alert('Please select a valid image file (JPEG, PNG, GIF, WEBP)');
+                return;
+            }
+            if(file.size > 2 * 1024 * 1024) {
+                alert('Image is too large! Please select under 2MB for optimal performance.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const base64 = evt.target.result;
+                imgUrlInput.value = base64;
+                updatePreview(base64);
+                showToast('✅ Image uploaded and encoded as base64!');
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        const closeModal = () => modalDiv.remove();
+        document.getElementById('modalCancel').onclick = closeModal;
+        document.getElementById('modalSave').onclick = () => {
+            const titleEn = document.getElementById('modTitleEn').value.trim();
+            const start = document.getElementById('modStart').value;
+            const end = document.getElementById('modEnd').value;
+            if(!titleEn || !start || !end) { alert("Please fill Title (EN) and dates"); return; }
+            let finalImage = imgUrlInput.value.trim();
+            if(!finalImage) finalImage = 'https://placehold.co/500x300?text=Festival';
+            const newHoliday = {
+                id: holiday ? holiday.id : Date.now().toString(),
+                titleEn: titleEn,
+                titleAm: document.getElementById('modTitleAm').value,
+                descEn: document.getElementById('modDescEn').value,
+                descAm: document.getElementById('modDescAm').value,
+                category: document.getElementById('modCategory').value,
+                imageUrl: finalImage,
+                startDate: start,
+                endDate: end,
+                approved: holiday ? holiday.approved : false,
+                active: holiday ? holiday.active : true,
+                postedBy: document.getElementById('modPostedBy').value || 'Admin',
+                createdAt: holiday ? holiday.createdAt : new Date().toISOString(),
+                likeCount: holiday ? (holiday.likeCount || 0) : 0
+            };
+            if(holiday) {
+                const index = holidays.findIndex(h => h.id === holiday.id);
+                holidays[index] = { ...holidays[index], ...newHoliday };
+            } else { holidays.unshift(newHoliday); }
+            saveData();
+            closeModal();
+            renderAdmin();
+        };
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    function setView(view) {
+        currentView = view;
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            if(btn.getAttribute('data-view') === view) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+        if(view === 'public') renderPublic();
+        else renderAdmin();
+    }
+
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('darkToggle').innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i> Light' : '<i class="fas fa-moon"></i> Dark';
+    }
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const newTheme = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        document.getElementById('darkToggle').innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i> Light' : '<i class="fas fa-moon"></i> Dark';
+    }
+
+    // Scroll to top button logic
+    window.addEventListener('scroll', () => {
+        const btn = document.getElementById('scrollTopBtn');
+        if(window.scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+    });
+    document.getElementById('scrollTopBtn').addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+    loadData();
+    initTheme();
+    setView('public');
+    document.querySelectorAll('.view-btn').forEach(btn => btn.addEventListener('click', (e) => { setView(btn.getAttribute('data-view')); }));
+    document.getElementById('darkToggle').addEventListener('click', toggleTheme);
+</script>
+</body>
+</html>
