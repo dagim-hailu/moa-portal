@@ -3,7 +3,8 @@ type GraphqlResponse<T> = {
   errors?: Array<{ message: string }>;
 };
 
-const GRAPHQL_ENDPOINT = process.env.MOA_SERVER_GRAPHQL_URL ?? "http://localhost:4000/graphql";
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? process.env.SERVER_URL ?? "http://localhost:4000";
+const GRAPHQL_ENDPOINT = process.env.MOA_SERVER_GRAPHQL_URL ?? `${SERVER_URL}/graphql`;
 
 export async function runGraphql<TData>(
   query: string,
