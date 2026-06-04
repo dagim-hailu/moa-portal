@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { ACCESS_COOKIE_NAME } from "../../../../lib/auth";
 import { getServerHttpBaseUrl } from "../../../../lib/server-http";
 
+export const dynamic = "force-dynamic";
+
 async function proxy(req: NextRequest, { params }: { params: { path?: string[] } }) {
   const token = cookies().get(ACCESS_COOKIE_NAME)?.value || cookies().get("moa_token")?.value;
   if (!token) {
@@ -20,6 +22,7 @@ async function proxy(req: NextRequest, { params }: { params: { path?: string[] }
     headers: {
       Authorization: `Bearer ${token}`,
     },
+    cache: "no-store",
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
