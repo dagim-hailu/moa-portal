@@ -3,8 +3,10 @@ import {
   UseGuards, Req, UseInterceptors, UploadedFile, BadRequestException, ForbiddenException, NotFoundException
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { diskStorage } from "multer";
+import { memoryStorage } from "multer";
 import { extname, join } from "path";
+import { v2 as cloudinary } from "cloudinary";
+import * as streamifier from "streamifier";
 import { JwtAuthGuard } from "./auth/jwt.guard";
 import { DatabaseService } from "../db/database.service";
 import { existsSync, mkdirSync } from "fs";
@@ -241,25 +243,41 @@ export class ChatController {
   @UseGuards(JwtAuthGuard)
   @Post("upload")
   @UseInterceptors(FileInterceptor("file", {
-    storage: diskStorage({
-      destination: (req, file, cb) => {
-        const uploadPath = join(process.cwd(), "public/uploads");
-        if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
-        cb(null, uploadPath);
-      },
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
-      },
-    }),
+    storage: memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
   }))
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException("No file uploaded");
-    const fileUrl = `/uploads/${file.filename}`;
+
+    if (!process.env.CLOUDINARY_URL) {
+      throw new BadRequestException("CLOUDINARY_URL environment variable is missing.");
+    }
+
     const isImage = file.mimetype.startsWith("image/");
     const isAudio = file.mimetype.startsWith("audio/") || file.mimetype.includes("ogg") || file.originalname.endsWith(".webm");
     const fileType = isAudio ? "voice" : isImage ? "image" : "file";
+    
+    // Cloudinary uses 'video' for audio files, 'image' for images, and 'raw' for everything else
+    const resourceType = isAudio ? "video" : isImage ? "image" : "raw";
+
+    let fileUrl: string;
+    try {
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const cldStream = cloudinary.uploader.upload_stream(
+          { resource_type: resourceType, folder: "moa_chat_uploads" },
+          (error, result) => {
+            if (result) resolve(result);
+            else reject(error);
+          }
+        );
+        streamifier.createReadStream(file.buffer).pipe(cldStream);
+      });
+      fileUrl = uploadResult.secure_url;
+    } catch (err: any) {
+      console.error("Cloudinary upload failed:", err);
+      throw new BadRequestException("Upload failed: " + (err.message || err.toString()));
+    }
+
     return { fileUrl, fileType, originalName: file.originalname, mimeType: file.mimetype, size: file.size };
   }
 }

@@ -64,6 +64,12 @@ const getWsUrl = () => {
 };
 const SERVER_URL = getWsUrl();
 
+const getFileUrl = (url?: string) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `${SERVER_URL}${url}`;
+};
+
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [deletedRooms, setDeletedRooms] = useState<Conversation[]>([]);
@@ -223,7 +229,7 @@ export default function ChatPage() {
       .filter(u => u.id !== currentUser.id)
       .map(u => ({
         id: u.id, name: u.fullName,
-        avatar: u.avatarUrl ? `${SERVER_URL}${u.avatarUrl}` : `https://i.pravatar.cc/150?u=${u.id}`,
+        avatar: u.avatarUrl ? getFileUrl(u.avatarUrl) : `https://i.pravatar.cc/150?u=${u.id}`,
         status: u.role, lastMsg: "Tap to chat", type: "direct" as const,
       }));
     setConversations(prev => {
@@ -802,7 +808,7 @@ export default function ChatPage() {
       return;
     }
     if (voiceAudioRef.current) { voiceAudioRef.current.pause(); }
-    const audio = new Audio(`${SERVER_URL}${fileUrl}`);
+    const audio = new Audio(getFileUrl(fileUrl));
     voiceAudioRef.current = audio;
     setVoiceProgress(0);
     setVoiceCurrentTimeMap(prev => ({ ...prev, [msgId]: 0 }));
@@ -970,7 +976,7 @@ export default function ChatPage() {
                 {(() => {
                   const me = allUsers.find(u => u.id === currentUser?.id);
                   return me?.avatarUrl
-                    ? <img src={`${SERVER_URL}${me.avatarUrl}`} alt="" className="w-full h-full object-cover rounded-full" />
+                    ? <img src={getFileUrl(me.avatarUrl)} alt="" className="w-full h-full object-cover rounded-full" />
                     : <i className="fa-solid fa-user text-xs"></i>;
                 })()}
               </button>
@@ -1191,10 +1197,10 @@ export default function ChatPage() {
                           {msg.fileType === "image" ? (
                             <div
                               className="relative group cursor-zoom-in"
-                              onClick={() => setLightboxUrl(`${SERVER_URL}${msg.fileUrl}`)}
+                              onClick={() => setLightboxUrl(getFileUrl(msg.fileUrl))}
                             >
                               <img
-                                src={`${SERVER_URL}${msg.fileUrl}`}
+                                src={getFileUrl(msg.fileUrl)}
                                 alt=""
                                 className="max-w-full rounded-lg max-h-[280px] object-cover block"
                                 onError={e => { (e.target as HTMLImageElement).src = "/placeholder.png"; }}
@@ -1205,7 +1211,7 @@ export default function ChatPage() {
                             </div>
                           ) : (
                             <a
-                              href={`${SERVER_URL}${msg.fileUrl}`}
+                              href={getFileUrl(msg.fileUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                               download={msg.content || true}
@@ -1601,19 +1607,19 @@ export default function ChatPage() {
             setSidebarTab("all");
           }}
           currentUserId={currentUser?.id}
-          onProfileUpdated={(updatedAvatarUrl, updatedFullName) => {
+          onProfileUpdated={(updatedUserId, updatedAvatarUrl, updatedFullName) => {
             if (!currentUser) return;
             // Refresh allUsers so sidebar avatar and name reflect the change
             setAllUsers(prev => prev.map(u =>
-              u.id === currentUser.id
+              u.id === updatedUserId
                 ? { ...u, avatarUrl: updatedAvatarUrl ?? u.avatarUrl, fullName: updatedFullName ?? u.fullName }
                 : u
             ));
             // Refresh conversations list (direct conv entry for self won't exist, but
             // the profile button rerenders via allUsers dependency)
             setConversations(prev => prev.map(c =>
-              c.id === currentUser.id
-                ? { ...c, name: updatedFullName ?? c.name, avatar: updatedAvatarUrl ? `${SERVER_URL}${updatedAvatarUrl}` : c.avatar }
+              c.id === updatedUserId
+                ? { ...c, name: updatedFullName ?? c.name, avatar: updatedAvatarUrl ? getFileUrl(updatedAvatarUrl) : c.avatar }
                 : c
             ));
           }}
