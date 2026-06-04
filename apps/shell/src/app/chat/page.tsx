@@ -98,6 +98,7 @@ export default function ChatPage() {
   const [editContent, setEditContent] = useState("");
   const [deletedMessages, setDeletedMessages] = useState<Message[]>([]);
   const [showTrash, setShowTrash] = useState(false);
+  const [reconnectCount, setReconnectCount] = useState(0);
   const [createGroupStep, setCreateGroupStep] = useState<"details" | "members">("details");
   const [newRoomData, setNewRoomData] = useState<{ name: string; type: string; description: string } | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -266,11 +267,17 @@ export default function ChatPage() {
       socketInstance = sock;
       setSocket(sock);
 
+      let isInitialConnect = true;
       sock.on("connect", () => {
         console.log("WS connected to", SERVER_URL);
-        // Clear stale in-memory cache on every (re)connect so messages are
-        // re-fetched from the DB, eliminating any stuck temp-ID messages.
-        messagesByConvRef.current.clear();
+        // Only clear cache and refetch on RE-connects to fix stuck temp IDs.
+        // Doing this on initial connect clears the already-fetched HTTP history.
+        if (!isInitialConnect) {
+          messagesByConvRef.current.clear();
+          setReconnectCount(c => c + 1);
+        }
+        isInitialConnect = false;
+        
         bumpMessages();
         fetchUnreadCounts();
         if (!notifPermittedRef.current && "Notification" in window && Notification.permission === "default") {
@@ -457,7 +464,7 @@ export default function ChatPage() {
         setConvMessages(activeConvId, msgs);
       } catch (e) { console.error("History fetch error:", e); }
     })();
-  }, [activeConvId, currentUser, activeConv]);
+  }, [activeConvId, currentUser, activeConv, reconnectCount]);
 
   // ── Load room members + current role ──
   useEffect(() => {
