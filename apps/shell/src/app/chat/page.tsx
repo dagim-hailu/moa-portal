@@ -440,7 +440,7 @@ export default function ChatPage() {
           ? `/api/chat/rooms/${activeConvId}/messages`
           : `/api/chat/history?receiverId=${activeConvId}`;
         console.log("Fetching history:", url);
-        const res = await fetch(url);
+        const res = await fetch(url, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
         if (!res.ok) {
           console.error("History fetch failed:", res.status, await res.text());
           return;

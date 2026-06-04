@@ -46,12 +46,20 @@ async function proxy(req: NextRequest, { params }: { params: { path?: string[] }
     }
 
     const contentType = res.headers.get("content-type");
+    const responseHeaders: Record<string, string> = {
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    };
+    
     if (contentType?.includes("application/json")) {
-      return NextResponse.json(await res.json(), { status: res.status });
+      return NextResponse.json(await res.json(), { 
+        status: res.status,
+        headers: responseHeaders,
+      });
     } else {
+      if (contentType) responseHeaders["Content-Type"] = contentType;
       return new NextResponse(await res.text(), { 
         status: res.status, 
-        headers: { "Content-Type": contentType || "text/plain" } 
+        headers: responseHeaders,
       });
     }
   } catch (e) {
