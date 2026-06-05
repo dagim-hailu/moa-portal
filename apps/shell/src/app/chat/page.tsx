@@ -102,6 +102,9 @@ export default function ChatPage() {
   const [createGroupStep, setCreateGroupStep] = useState<"details" | "members">("details");
   const [newRoomData, setNewRoomData] = useState<{ name: string; type: string; description: string } | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [pinnedConvs, setPinnedConvs] = useState<Set<string>>(new Set());
+  const [blockedEntities, setBlockedEntities] = useState<Set<string>>(new Set());
+  const [showBlocklist, setShowBlocklist] = useState(false);
   const unreadCountsRef = useRef<Map<string, number>>(new Map());
   const [unreadVersion, setUnreadVersion] = useState(0);
   const bumpUnread = () => setUnreadVersion(v => v + 1);
@@ -178,11 +181,13 @@ export default function ChatPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [sessionRes, usersRes, roomsRes, notifCountRes] = await Promise.all([
+        const [sessionRes, usersRes, roomsRes, notifCountRes, pinnedRes, blockedRes] = await Promise.all([
           fetch("/api/auth/session"),
           fetch("/api/chat/users"),
           fetch("/api/chat/rooms"),
           fetch("/api/chat/notifications/unread-count"),
+          fetch("/api/chat/pinned"),
+          fetch("/api/chat/blocked"),
         ]);
         if (sessionRes.ok) {
           const session = await sessionRes.json();
@@ -198,6 +203,14 @@ export default function ChatPage() {
         if (notifCountRes.ok) {
           const { count } = await notifCountRes.json();
           setNotifCount(count);
+        }
+        if (pinnedRes.ok) {
+          const pinned = await pinnedRes.json();
+          setPinnedConvs(new Set(pinned.map((p: any) => p.conversationId)));
+        }
+        if (blockedRes.ok) {
+          const blocked = await blockedRes.json();
+          setBlockedEntities(new Set(blocked.map((b: any) => b.blockedId)));
         }
         if (roomsRes.ok) {
           const rooms = await roomsRes.json();
@@ -560,7 +573,7 @@ export default function ChatPage() {
 
   const fetchDeletedMessages = async () => {
     try {
-      const res = await fetch("/api/chat/messages/deleted");
+      const res = await fetch("/api/chat/messages/archived");
       if (res.ok) setDeletedMessages(await res.json());
     } catch {}
   };
@@ -922,7 +935,7 @@ export default function ChatPage() {
 
   const removeMemberFromRoom = async (roomId: string, userId: string) => {
     try {
-      const res = await fetch(`/api/chat/rooms/${roomId}/members?userId=${encodeURIComponent(userId)}`, { method: "DELETE" });
+      const res = await fetch(`/api/chat/rooms/${roomId}/members/${encodeURIComponent(userId)}`, { method: "DELETE" });
       if (res.ok) {
         const r = await fetch(`/api/chat/rooms/${roomId}/members`);
         if (r.ok) setActiveRoomMembers(await r.json());
@@ -930,25 +943,77 @@ export default function ChatPage() {
     } catch {}
   };
 
-  // Filter conversations
-  const filteredConversations = conversations.filter(c => {
-    const q = searchQuery.toLowerCase().trim();
-    if (q) {
-      const matchName = c.name.toLowerCase().includes(q);
-      const user = allUsers.find(u => u.id === c.id);
-      const matchMeta = user
-        ? (user.email?.toLowerCase().includes(q) ||
-            user.username?.toLowerCase().includes(q) ||
-            (user.phoneNumber ?? "").toLowerCase().includes(q))
-        : false;
-      if (!matchName && !matchMeta) return false;
+  const handleTogglePin = async (e: React.MouseEvent, conversationId: string) => {
+    e.stopPropagation();
+    try {
+      const isPinned = pinnedConvs.has(conversationId);
+      const res = await fetch(isPinned ? `/api/chat/pinned/${conversationId}` : "/api/chat/pinned", {
+        method: isPinned ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: isPinned ? undefined : JSON.stringify({ conversationId }),
+      });
+      if (res.ok) {
+        setPinnedConvs(prev => {
+          const next = new Set(prev);
+          if (isPinned) next.delete(conversationId);
+          else next.add(conversationId);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Failed to toggle pin", err);
     }
-    if (sidebarTab === "all") return true;
-    if (sidebarTab === "direct") return c.type === "direct";
-    if (sidebarTab === "groups") return c.type === "group";
-    if (sidebarTab === "channels") return c.type === "channel";
-    return true;
-  });
+  };
+
+  const handleToggleBlock = async (blockedId: string) => {
+    try {
+      const isBlocked = blockedEntities.has(blockedId);
+      const res = await fetch(isBlocked ? `/api/chat/blocked/${blockedId}` : "/api/chat/blocked", {
+        method: isBlocked ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: isBlocked ? undefined : JSON.stringify({ blockedId }),
+      });
+      if (res.ok) {
+        setBlockedEntities(prev => {
+          const next = new Set(prev);
+          if (isBlocked) next.delete(blockedId);
+          else next.add(blockedId);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Failed to toggle block", err);
+    }
+  };
+
+  const filteredConversations = conversations
+    .filter(c => !blockedEntities.has(c.id))
+    .filter(c => {
+      const q = searchQuery.toLowerCase().trim();
+      if (q) {
+        const matchName = c.name.toLowerCase().includes(q);
+        const user = allUsers.find(u => u.id === c.id);
+        const matchMeta = user
+          ? (user.email?.toLowerCase().includes(q) ||
+              user.username?.toLowerCase().includes(q) ||
+              (user.phoneNumber ?? "").toLowerCase().includes(q))
+          : false;
+        if (!matchName && !matchMeta) return false;
+      }
+      if (sidebarTab === "all") return true;
+      if (sidebarTab === "direct") return c.type === "direct";
+      if (sidebarTab === "groups") return c.type === "group";
+      if (sidebarTab === "channels") return c.type === "channel";
+      return true;
+    })
+    .sort((a, b) => {
+      const aPinned = pinnedConvs.has(a.id);
+      const bPinned = pinnedConvs.has(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      // You could add further sorting by lastMsg time here if available
+      return 0;
+    });
 
   const typingNames = Array.from(typingUsers).map(id => getSenderName(id));
 
@@ -986,6 +1051,9 @@ export default function ChatPage() {
                     ? <img src={getFileUrl(me.avatarUrl)} alt="" className="w-full h-full object-cover rounded-full" />
                     : <i className="fa-solid fa-user text-xs"></i>;
                 })()}
+              </button>
+              <button onClick={() => setShowBlocklist(true)} className="w-8 h-8 rounded-full bg-[var(--bg-main)] text-[var(--text-muted)] flex items-center justify-center hover:text-[var(--primary-green)]" title="Blocked Users">
+                <i className="fa-solid fa-shield-halved text-xs"></i>
               </button>
               <button onClick={startCreateGroup} className="w-8 h-8 rounded-full bg-[var(--primary-green)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)]" title="Create Group/Channel">
                 <i className="fa-solid fa-plus text-xs"></i>
@@ -1047,7 +1115,12 @@ export default function ChatPage() {
                       <span className="text-[0.6rem] px-1.5 py-0.5 rounded-full font-bold uppercase flex-shrink-0 bg-[var(--primary-light)] text-[var(--primary-green)]">{conv.type}</span>
                     )}
                   </span>
-                  {conv.time && <span className="text-[0.65rem] text-[var(--text-muted)] font-normal flex-shrink-0 ml-2">{conv.time}</span>}
+                  <div className="flex items-center gap-2">
+                    <button onClick={(e) => handleTogglePin(e, conv.id)} className={`text-[0.75rem] transition hover:scale-110 ${pinnedConvs.has(conv.id) ? "text-[var(--primary-green)]" : "text-[var(--border-color)] hover:text-[var(--text-muted)]"}`}>
+                      <i className="fa-solid fa-thumbtack"></i>
+                    </button>
+                    {conv.time && <span className="text-[0.65rem] text-[var(--text-muted)] font-normal flex-shrink-0">{conv.time}</span>}
+                  </div>
                 </div>
                 <div className="last-msg text-[0.78rem] text-[var(--text-muted)] whitespace-nowrap overflow-hidden text-ellipsis flex justify-between">
                   <span>{conv.lastMsg}</span>
@@ -1616,6 +1689,39 @@ export default function ChatPage() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blocklist Modal */}
+      {showBlocklist && (
+        <div className="fixed inset-0 z-[4500] bg-black/50 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowBlocklist(false)}>
+          <div className="bg-[var(--sidebar-bg)] w-full max-w-md max-h-[85vh] overflow-hidden rounded-2xl shadow-2xl border border-[var(--border-color)] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-[var(--border-color)] flex items-center justify-between">
+              <h2 className="text-lg font-bold text-[var(--text-main)] flex items-center gap-2">
+                <i className="fa-solid fa-shield-halved text-[var(--primary-green)]"></i> Blocked Entities
+              </h2>
+              <button onClick={() => setShowBlocklist(false)} className="w-8 h-8 rounded-full hover:bg-[var(--bg-main)] text-[var(--text-main)] transition flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
+            </div>
+            <div className="flex-1 overflow-y-auto bg-[var(--bg-main)] p-4">
+              {blockedEntities.size === 0 ? (
+                <div className="text-center py-8 text-[var(--text-muted)]">No blocked users or channels.</div>
+              ) : (
+                Array.from(blockedEntities).map(id => {
+                  const user = allUsers.find(u => u.id === id);
+                  const room = conversations.find(c => c.id === id);
+                  const name = user?.fullName || room?.name || "Unknown";
+                  return (
+                    <div key={id} className="flex items-center justify-between p-3 mb-2 rounded-lg bg-[var(--sidebar-bg)] border border-[var(--border-color)]">
+                      <span className="text-sm font-semibold text-[var(--text-main)] truncate max-w-[70%]">{name}</span>
+                      <button onClick={() => handleToggleBlock(id)} className="text-xs px-3 py-1.5 rounded-md bg-[var(--primary-light)] text-[var(--primary-green)] font-bold hover:bg-[#d1ecd9]">
+                        Unblock
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
