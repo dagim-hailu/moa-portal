@@ -13,7 +13,7 @@ interface Message {
   senderId: string;
   content?: string;
   fileUrl?: string;
-  fileType?: "image" | "file" | "voice";
+  fileType?: "image" | "file" | "voice" | "video";
   messageType: "text" | "attachment" | "voice";
   time: string;
   replyToId?: string;
@@ -116,6 +116,8 @@ export default function ChatPage() {
   const [roomMemberSearch, setRoomMemberSearch] = useState("");
 
   const [showProfileModal, setShowProfileModal] = useState<string | null>(null);
+  const [showMemberDirectory, setShowMemberDirectory] = useState(false);
+  const [memberDirSearch, setMemberDirSearch] = useState("");
 
   const chatBoxRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -608,12 +610,20 @@ export default function ChatPage() {
   };
 
   const handleNotifClick = (notif: any) => {
-    if (notif.data?.senderId) {
-      setActiveConvId(notif.data.senderId);
+    // Navigate to the referenced conversation
+    const d = notif.data || {};
+    const targetId = d.roomId || d.conversationId || d.receiverId || d.senderId;
+    if (targetId) {
+      setActiveConvId(targetId);
       setShowTrash(false);
-      setSidebarTab("direct");
+      // Determine best sidebar tab
+      const isRoom = conversations.find(c => c.id === targetId);
+      if (isRoom && isRoom.type !== "direct") setSidebarTab("groups");
+      else setSidebarTab("direct");
     }
     setShowNotifDropdown(false);
+    // Mark this notification read on server
+    fetch(`/api/chat/notifications/${notif.id}/read`, { method: "PUT" }).catch(() => {});
   };
 
   // ── Typing indicator ──
@@ -1176,6 +1186,15 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="flex gap-[8px]">
+                {activeConv.type !== "direct" && (
+                  <button
+                    onClick={() => { setShowMemberDirectory(v => !v); setMemberDirSearch(""); }}
+                    className={`w-8 h-8 flex items-center justify-center rounded-[8px] text-xs transition ${showMemberDirectory ? "bg-[var(--primary-green)] text-white" : "bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-[var(--primary-green)]"}`}
+                    title="Member Directory"
+                  >
+                    <i className="fa-solid fa-users-rectangle"></i>
+                  </button>
+                )}
                 {activeConv.type !== "direct" && canManageRoom && (
                   <>
                     <button onClick={() => setShowEditRoom(true)} className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-[var(--primary-green)]" title="Edit"><i className="fa-solid fa-pen-to-square text-xs"></i></button>
@@ -1288,6 +1307,27 @@ export default function ChatPage() {
                               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition rounded-lg bg-black/20">
                                 <i className="fa-solid fa-expand text-white text-lg drop-shadow"></i>
                               </div>
+                            </div>
+                          ) : msg.fileType === "video" ? (
+                            <div className="relative rounded-xl overflow-hidden bg-black max-w-[340px] shadow-lg">
+                              <video
+                                src={getFileUrl(msg.fileUrl)}
+                                controls
+                                preload="metadata"
+                                className="w-full max-h-[260px] rounded-xl block"
+                                style={{ background: "#000" }}
+                              >
+                                Your browser does not support video playback.
+                              </video>
+                              <a
+                                href={getFileUrl(msg.fileUrl)}
+                                download
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="absolute bottom-2 right-2 bg-black/60 text-white text-[0.6rem] px-2 py-1 rounded-md flex items-center gap-1 hover:bg-black/80 transition"
+                              >
+                                <i className="fa-solid fa-download"></i> Save
+                              </a>
                             </div>
                           ) : (
                             <a
@@ -1437,6 +1477,45 @@ export default function ChatPage() {
                 <i className="fa-solid fa-paper-plane"></i>
               </button>
             </div>
+            
+            {/* Member Directory Sidebar */}
+            {showMemberDirectory && activeConv.type !== "direct" && (
+              <div className="absolute top-16 right-0 bottom-0 w-[300px] bg-[var(--sidebar-bg)] border-l border-[var(--border-color)] shadow-2xl z-20 flex flex-col animate-in slide-in-from-right duration-200">
+                <div className="p-4 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]">
+                  <h3 className="font-bold text-[var(--text-main)]"><i className="fa-solid fa-users mr-2"></i>Members</h3>
+                  <button onClick={() => setShowMemberDirectory(false)} className="text-[var(--text-muted)] hover:text-[var(--text-main)]"><i className="fa-solid fa-xmark"></i></button>
+                </div>
+                <div className="p-3 border-b border-[var(--border-color)]">
+                  <div className="bg-[var(--bg-main)] rounded-lg flex items-center px-3 py-1.5 border border-[var(--border-color)]">
+                    <i className="fa-solid fa-magnifying-glass text-[0.7rem] text-[var(--text-muted)]"></i>
+                    <input
+                      value={memberDirSearch}
+                      onChange={e => setMemberDirSearch(e.target.value)}
+                      placeholder="Search members..."
+                      className="bg-transparent border-none outline-none text-sm ml-2 w-full text-[var(--text-main)]"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {activeRoomMembers
+                    .map(m => ({ m, u: allUsers.find(x => x.id === m.userId) }))
+                    .filter(({ u }) => !memberDirSearch || u?.fullName.toLowerCase().includes(memberDirSearch.toLowerCase()) || u?.email.toLowerCase().includes(memberDirSearch.toLowerCase()))
+                    .map(({ m, u }) => (
+                      <div key={m.userId} onClick={() => setShowProfileModal(m.userId)} className="p-3 flex items-center gap-3 border-b border-[var(--border-color)] cursor-pointer hover:bg-[var(--bg-main)] transition">
+                        <div className="relative">
+                          <img src={`https://i.pravatar.cc/150?u=${m.userId}`} className="w-10 h-10 rounded-full object-cover" alt="" />
+                          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[var(--sidebar-bg)] ${onlineUsers.has(m.userId) ? "bg-[var(--primary-green)]" : "bg-gray-400"}`}></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-[var(--text-main)] truncate">{u?.fullName || "User"}</div>
+                          <div className="text-[0.65rem] text-[var(--primary-green)] uppercase font-bold">{m.role}</div>
+                        </div>
+                      </div>
+                    ))}
+                  {activeRoomMembers.length === 0 && <div className="p-4 text-center text-sm text-[var(--text-muted)]">No members found</div>}
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-[var(--text-muted)] text-[1rem]">

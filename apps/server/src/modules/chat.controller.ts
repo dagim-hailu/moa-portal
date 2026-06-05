@@ -170,7 +170,7 @@ export class ChatController {
 
   @UseGuards(JwtAuthGuard)
   @Put("profile")
-  async updateProfile(@Req() req: any, @Body() body: { fullName?: string; avatarUrl?: string }) {
+  async updateProfile(@Req() req: any, @Body() body: { fullName?: string; avatarUrl?: string; username?: string; phoneNumber?: string | null }) {
     return this.database.updateCurrentUserProfile(req.user.sub, body);
   }
 
@@ -261,10 +261,11 @@ export class ChatController {
 
     const isImage = file.mimetype.startsWith("image/");
     const isAudio = file.mimetype.startsWith("audio/") || file.mimetype.includes("ogg") || file.originalname.endsWith(".webm");
-    const fileType = isAudio ? "voice" : isImage ? "image" : "file";
-    
-    // Cloudinary uses 'video' for audio files, 'image' for images, and 'raw' for everything else
-    const resourceType = isAudio ? "video" : isImage ? "image" : "raw";
+    const isVideo = !isAudio && file.mimetype.startsWith("video/");
+    const fileType = isAudio ? "voice" : isImage ? "image" : isVideo ? "video" : "file";
+
+    // Cloudinary uses 'video' for audio/video files, 'image' for images, and 'raw' for everything else
+    const resourceType = (isAudio || isVideo) ? "video" : isImage ? "image" : "raw";
 
     let fileUrl: string;
     try {

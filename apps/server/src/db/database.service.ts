@@ -901,11 +901,13 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ── Profile Update ──
-  async updateCurrentUserProfile(userId: string, input: { fullName?: string; avatarUrl?: string; passwordHash?: string }) {
+  async updateCurrentUserProfile(userId: string, input: { fullName?: string; avatarUrl?: string; passwordHash?: string; username?: string; phoneNumber?: string | null }) {
     const data: Record<string, unknown> = {};
     if (input.fullName !== undefined) data.fullName = input.fullName;
     if (input.avatarUrl !== undefined) data.avatarUrl = input.avatarUrl;
     if (input.passwordHash !== undefined) data.passwordHash = input.passwordHash;
+    if (input.username !== undefined) data.username = input.username;
+    if ("phoneNumber" in input) data.phoneNumber = input.phoneNumber ?? null;
     if (Object.keys(data).length === 0) return null;
     const [updated] = await this.db.update(users).set(data).where(eq(users.id, userId)).returning();
     return updated ?? null;
