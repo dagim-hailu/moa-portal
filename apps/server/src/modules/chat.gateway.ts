@@ -85,6 +85,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (data.receiverId === sender.sub) throw new ForbiddenException("Cannot message yourself");
       const ok = await this.database.userExists(data.receiverId);
       if (!ok) throw new ForbiddenException("Receiver not found");
+      const blocked = await this.database.hasBlocked(sender.sub, data.receiverId);
+      if (blocked) throw new ForbiddenException("Cannot send message: Blocked");
     }
 
     const saved = await this.database.saveChatMessage({

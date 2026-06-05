@@ -102,6 +102,12 @@ export class ChatController {
       throw new ForbiddenException(admin.reason === "NOT_AN_ADMIN" ? "Admin required" : "Not a room member");
     }
     await this.database.removeRoomMember(roomId, userId);
+    await this.database.saveChatMessage({
+      roomId,
+      senderId: req.user.sub,
+      messageType: "system",
+      content: "User removed from the room.",
+    });
     return { success: true };
   }
 
@@ -279,5 +285,51 @@ export class ChatController {
     }
 
     return { fileUrl, fileType, originalName: file.originalname, mimeType: file.mimetype, size: file.size };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("messages/archived")
+  async getArchivedMessages(@Req() req: any) {
+    return this.database.getArchivedMessages(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("pinned")
+  async getPinnedConversations(@Req() req: any) {
+    return this.database.getPinnedConversations(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("pinned")
+  async pinConversation(@Req() req: any, @Body() body: { conversationId: string }) {
+    if (!body.conversationId) throw new BadRequestException("conversationId is required");
+    return this.database.pinConversation(req.user.sub, body.conversationId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete("pinned/:conversationId")
+  async unpinConversation(@Req() req: any, @Param("conversationId") conversationId: string) {
+    await this.database.unpinConversation(req.user.sub, conversationId);
+    return { success: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("blocked")
+  async getBlockedEntities(@Req() req: any) {
+    return this.database.getBlockedEntities(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("blocked")
+  async blockEntity(@Req() req: any, @Body() body: { blockedId: string }) {
+    if (!body.blockedId) throw new BadRequestException("blockedId is required");
+    return this.database.blockEntity(req.user.sub, body.blockedId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete("blocked/:blockedId")
+  async unblockEntity(@Req() req: any, @Param("blockedId") blockedId: string) {
+    await this.database.unblockEntity(req.user.sub, blockedId);
+    return { success: true };
   }
 }

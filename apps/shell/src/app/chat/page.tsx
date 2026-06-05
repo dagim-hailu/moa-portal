@@ -1113,13 +1113,13 @@ export default function ChatPage() {
             </div>
 
             {/* Messages */}
-            <div className="messages-container flex-1 p-[20px] overflow-y-auto flex flex-col gap-2" ref={chatBoxRef}>
+            <div className="messages-container flex-1 p-[20px] overflow-y-auto flex flex-col-reverse gap-2" ref={chatBoxRef}>
               {activeMessages.length === 0 && (
                 <div className="flex-1 flex items-center justify-center text-[var(--text-muted)] text-[0.9rem]">
                   No messages yet. Say hello!
                 </div>
               )}
-              {activeMessages.map(msg => {
+              {activeMessages.slice().reverse().map(msg => {
                 const isMe = msg.senderId === currentUser?.id;
                 const repliedMsg = msg.replyToId ? activeMessages.find(m => m.id === msg.replyToId) : null;
                 const isEditing = editingMsgId === msg.id;
@@ -1287,10 +1287,28 @@ export default function ChatPage() {
               <input type="file" className="hidden" ref={fileInputRef} onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
               <div onClick={() => fileInputRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-[var(--bg-main)] cursor-pointer text-[var(--text-muted)] hover:text-[var(--primary-green)] hover:bg-[var(--primary-light)]"><i className="fa-solid fa-paperclip text-sm"></i></div>
               <div className="flex-1 bg-[var(--bg-main)] p-[4px_12px] rounded-[12px] flex items-center border border-[var(--border-color)]">
-                <input type="text" placeholder="Message..." value={msgInput}
-                  onChange={e => { setMsgInput(e.target.value); handleTyping(); }}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); } }}
-                  className="flex-1 p-[8px] border-none bg-transparent outline-none text-[var(--text-main)] text-[0.9rem]" />
+                <textarea
+                  className="flex-1 px-2 py-2 bg-transparent border-none focus:outline-none resize-none overflow-hidden min-h-[40px] max-h-[120px] text-[var(--text-main)] text-[0.9rem]"
+                  placeholder="Type a message... (Ctrl+Enter for new line)"
+                  value={msgInput}
+                  onChange={e => {
+                    setMsgInput(e.target.value);
+                    handleTyping();
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && !e.ctrlKey && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMsg();
+                      e.currentTarget.style.height = 'auto';
+                    } else if (e.key === "Enter" && e.ctrlKey) {
+                      e.preventDefault();
+                      setMsgInput(prev => prev + "\n");
+                    }
+                  }}
+                  rows={1}
+                />
                 <div className="relative" ref={emojiPickerRef}>
                   <i className={`fa-regular fa-face-smile text-[var(--text-muted)] cursor-pointer hover:text-[var(--primary-green)] ${showEmojiPicker ? "text-[var(--primary-green)]" : ""}`}
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}></i>
@@ -1614,18 +1632,19 @@ export default function ChatPage() {
             setSidebarTab("all");
           }}
           currentUserId={currentUser?.id}
-          onProfileUpdated={(updatedUserId, updatedAvatarUrl, updatedFullName) => {
+          onProfileUpdated={(updatedAvatarUrl, updatedFullName) => {
             if (!currentUser) return;
+            const targetUserId = showProfileModal;
             // Refresh allUsers so sidebar avatar and name reflect the change
             setAllUsers(prev => prev.map(u =>
-              u.id === updatedUserId
+              u.id === targetUserId
                 ? { ...u, avatarUrl: updatedAvatarUrl ?? u.avatarUrl, fullName: updatedFullName ?? u.fullName }
                 : u
             ));
             // Refresh conversations list (direct conv entry for self won't exist, but
             // the profile button rerenders via allUsers dependency)
             setConversations(prev => prev.map(c =>
-              c.id === updatedUserId
+              c.id === targetUserId
                 ? { ...c, name: updatedFullName ?? c.name, avatar: updatedAvatarUrl ? getFileUrl(updatedAvatarUrl) : c.avatar }
                 : c
             ));

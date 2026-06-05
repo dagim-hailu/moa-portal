@@ -43,6 +43,13 @@
       "when": 1780571266804,
       "tag": "0005_lucky_proteus",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780647913200,
+      "tag": "0006_flat_ben_urich",
+      "breakpoints": true
     }
   ]
 }

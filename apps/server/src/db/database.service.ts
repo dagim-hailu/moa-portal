@@ -16,6 +16,8 @@ import {
   chatDirectReadStatus,
   notifications,
   notificationPreferences,
+  chatPinnedConversations,
+  chatBlockedEntities,
 } from "@moa/shared/db";
 
 @Injectable()
@@ -594,6 +596,70 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       .where(and(eq(chatMessages.id, messageId), eq(chatMessages.senderId, userId)))
       .returning();
     return updated ?? null;
+  }
+
+  async getArchivedMessages(userId: string) {
+    return await this.db
+      .select()
+      .from(chatMessages)
+      .where(and(not(isNull(chatMessages.deletedAt)), eq(chatMessages.senderId, userId)))
+      .orderBy(desc(chatMessages.deletedAt));
+  }
+
+  async pinConversation(userId: string, conversationId: string) {
+    const [pinned] = await this.db
+      .insert(chatPinnedConversations)
+      .values({ userId, conversationId })
+      .onConflictDoNothing()
+      .returning();
+    return pinned;
+  }
+
+  async unpinConversation(userId: string, conversationId: string) {
+    await this.db
+      .delete(chatPinnedConversations)
+      .where(and(eq(chatPinnedConversations.userId, userId), eq(chatPinnedConversations.conversationId, conversationId)));
+  }
+
+  async getPinnedConversations(userId: string) {
+    return await this.db
+      .select()
+      .from(chatPinnedConversations)
+      .where(eq(chatPinnedConversations.userId, userId));
+  }
+
+  async blockEntity(blockerId: string, blockedId: string) {
+    const [blocked] = await this.db
+      .insert(chatBlockedEntities)
+      .values({ blockerId, blockedId })
+      .onConflictDoNothing()
+      .returning();
+    return blocked;
+  }
+
+  async unblockEntity(blockerId: string, blockedId: string) {
+    await this.db
+      .delete(chatBlockedEntities)
+      .where(and(eq(chatBlockedEntities.blockerId, blockerId), eq(chatBlockedEntities.blockedId, blockedId)));
+  }
+
+  async getBlockedEntities(blockerId: string) {
+    return await this.db
+      .select()
+      .from(chatBlockedEntities)
+      .where(eq(chatBlockedEntities.blockerId, blockerId));
+  }
+
+  async hasBlocked(userA: string, userB: string) {
+    const rows = await this.db
+      .select({ id: chatBlockedEntities.id })
+      .from(chatBlockedEntities)
+      .where(or(
+        and(eq(chatBlockedEntities.blockerId, userA), eq(chatBlockedEntities.blockedId, userB)),
+        and(eq(chatBlockedEntities.blockerId, userB), eq(chatBlockedEntities.blockedId, userA))
+      ))
+      .limit(1);
+    return rows.length > 0;
   }
 
   async restoreMessage(messageId: string, userId: string) {

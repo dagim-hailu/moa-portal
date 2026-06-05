@@ -150,3 +150,21 @@ export const notificationPreferences = pgTable("notification_preferences", {
   desktop: boolean("desktop").default(true).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const chatPinnedConversations = pgTable("chat_pinned_conversations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  conversationId: text("conversation_id").notNull(), // room UUID or user UUID
+  pinnedAt: timestamp("pinned_at").defaultNow().notNull(),
+}, (table) => ({
+  uniq: unique("chat_pinned_user_conv_idx").on(table.userId, table.conversationId),
+}));
+
+export const chatBlockedEntities = pgTable("chat_blocked_entities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  blockerId: uuid("blocker_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  blockedId: text("blocked_id").notNull(), // room UUID or user UUID
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniq: unique("chat_blocked_user_entity_idx").on(table.blockerId, table.blockedId),
+}));
