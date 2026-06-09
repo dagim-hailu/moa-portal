@@ -51,6 +51,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.leave(`room:${data.roomId}`);
   }
 
+  /** Called by ChatController after a room is created + members added */
+  broadcastRoomCreated(room: { id: string; name: string; type: string; description?: string | null; avatarUrl?: string | null }, memberUserIds: string[]) {
+    const payload = {
+      id: room.id,
+      name: room.name,
+      type: room.type,
+      description: room.description,
+      avatar: room.avatarUrl || `https://i.pravatar.cc/150?u=${room.id}`,
+      status: room.type,
+      lastMsg: "Chat created",
+    };
+    for (const uid of memberUserIds) {
+      this.server.to(uid).emit("roomCreated", payload);
+    }
+  }
+
   @SubscribeMessage("typing")
   handleTyping(@ConnectedSocket() client: Socket, @MessageBody() data: { receiverId?: string; roomId?: string; isTyping: boolean }) {
     const sender = client.data.user; if (!sender) return;
@@ -79,7 +95,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (membership.room) roomName = membership.room.name;
       if (membership.room.type === "channel") {
         const role = await this.database.getRoomMemberRole(data.roomId, sender.sub);
-        if (role !== "admin") throw new ForbiddenException("Only admins can post in channels");
+        if (role !== "admin" && role !== "manager") throw new ForbiddenException("Only admins and managers can post in channels");
       }
     } else if (data.receiverId) {
       if (data.receiverId === sender.sub) throw new ForbiddenException("Cannot message yourself");

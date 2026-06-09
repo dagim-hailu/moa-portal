@@ -121,7 +121,7 @@ export function ProfileModal({ userId, onClose, onStartChat, currentUserId, onPr
           fullName: newFullName,
           avatarUrl: newAvatarUrl,
           username: updated.username || editUsername.trim(),
-          phoneNumber: updated.phoneNumber ?? editPhone.trim() || null,
+          phoneNumber: (updated.phoneNumber ?? editPhone.trim()) || null,
         } : prev);
         setIsEditing(false);
         setAvatarFile(null);

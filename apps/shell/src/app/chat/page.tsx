@@ -149,6 +149,7 @@ export default function ChatPage() {
   const activeConv = conversations.find(c => c.id === activeConvId);
   const isRoomConv = activeConv?.type !== "direct";
   const canManageRoom = isRoomConv && activeRoomRole === "admin";
+  const canPostInChannel = activeConv?.type !== "channel" || activeRoomRole === "admin" || activeRoomRole === "manager";
 
   const getToken = async () => {
     try {
@@ -404,6 +405,22 @@ export default function ChatPage() {
 
       sock.on("roomEdited", (data: any) => {
         setConversations(prev => prev.map(c => c.id === data.id ? { ...c, name: data.name || c.name, description: data.description, avatar: data.avatarUrl || c.avatar } : c));
+      });
+
+      sock.on("roomCreated", (data: any) => {
+        setConversations(prev => {
+          // Avoid duplicates (creator already added it optimistically)
+          if (prev.some(c => c.id === data.id)) return prev;
+          return [...prev, {
+            id: data.id,
+            name: data.name,
+            avatar: data.avatar || `https://i.pravatar.cc/150?u=${data.id}`,
+            status: data.type,
+            lastMsg: data.lastMsg || "Chat created",
+            type: data.type as "group" | "channel",
+            description: data.description,
+          }];
+        });
       });
 
       sock.on("newNotification", (data: any) => {
@@ -896,6 +913,7 @@ export default function ChatPage() {
   const createGroupFinal = async () => {
     if (!newRoomData) return;
     try {
+      const avatarUrl = `https://i.pravatar.cc/150?u=${encodeURIComponent(newRoomData.name)}`;
       const res = await fetch("/api/chat/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -903,27 +921,28 @@ export default function ChatPage() {
           name: newRoomData.name,
           type: newRoomData.type,
           description: newRoomData.description,
-          avatarUrl: "https://i.pravatar.cc/150?u=group",
+          avatarUrl,
+          memberIds: selectedMembers,
         }),
       });
       if (res.ok) {
         const room = await res.json();
-        // Add selected members
-        for (const userId of selectedMembers) {
-          await fetch(`/api/chat/rooms/${room.id}/members`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId }),
-          });
-        }
-        setConversations(prev => [...prev, {
-          id: room.id, name: newRoomData.name,
-          avatar: "https://i.pravatar.cc/150?u=group",
-          status: newRoomData.type, lastMsg: "New chat created",
-          type: newRoomData.type as "group" | "channel",
-          description: newRoomData.description,
-        }]);
-        setShowCreateGroup(false); setActiveConvId(room.id);
+        // Creator sees it immediately; other members get roomCreated via WS
+        setConversations(prev => {
+          if (prev.some(c => c.id === room.id)) return prev;
+          return [...prev, {
+            id: room.id, name: newRoomData.name,
+            avatar: avatarUrl,
+            status: newRoomData.type, lastMsg: "Chat created",
+            type: newRoomData.type as "group" | "channel",
+            description: newRoomData.description,
+          }];
+        });
+        setShowCreateGroup(false);
+        setSelectedMembers([]);
+        setNewRoomData(null);
+        setCreateGroupStep("details");
+        setActiveConvId(room.id);
       } else { alert("Failed to create"); }
     } catch { alert("Failed to create"); }
   };
@@ -1387,96 +1406,102 @@ export default function ChatPage() {
               })}
             </div>
 
-            {/* Reply bar */}
-            {replyingTo && (
-              <div className="mx-[20px] mb-2 p-2 bg-[var(--bg-secondary)] rounded-lg flex items-center justify-between border border-[var(--border-color)]">
-                <span className="text-[0.75rem] text-[var(--text-muted)]">Replying to {getSenderName(replyingTo.senderId)}: {replyingTo.content?.slice(0, 60)}</span>
-                <button onClick={() => setReplyingTo(null)} className="text-[var(--text-muted)] hover:text-red-500"><i className="fa-solid fa-xmark"></i></button>
-              </div>
-            )}
-
-            {/* Input */}
-            <div className="p-[12px_20px] bg-[var(--sidebar-bg)] border-t border-[var(--border-color)] flex items-center gap-[10px] relative">
-              <input type="file" className="hidden" ref={fileInputRef} onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
-              <div onClick={() => fileInputRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-[var(--bg-main)] cursor-pointer text-[var(--text-muted)] hover:text-[var(--primary-green)] hover:bg-[var(--primary-light)]"><i className="fa-solid fa-paperclip text-sm"></i></div>
-              <div className="flex-1 bg-[var(--bg-main)] p-[4px_12px] rounded-[12px] flex items-center border border-[var(--border-color)]">
-                <textarea
-                  className="flex-1 px-2 py-2 bg-transparent border-none focus:outline-none resize-none overflow-hidden min-h-[40px] max-h-[120px] text-[var(--text-main)] text-[0.9rem]"
-                  placeholder="Type a message... (Ctrl+Enter for new line)"
-                  value={msgInput}
-                  onChange={e => {
-                    setMsgInput(e.target.value);
-                    handleTyping();
-                    e.target.style.height = 'auto';
-                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" && !e.ctrlKey && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMsg();
-                      e.currentTarget.style.height = 'auto';
-                    } else if (e.key === "Enter" && e.ctrlKey) {
-                      e.preventDefault();
-                      setMsgInput(prev => prev + "\n");
-                    }
-                  }}
-                  rows={1}
-                />
-                <div className="relative" ref={emojiPickerRef}>
-                  <i className={`fa-regular fa-face-smile text-[var(--text-muted)] cursor-pointer hover:text-[var(--primary-green)] ${showEmojiPicker ? "text-[var(--primary-green)]" : ""}`}
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}></i>
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-[45px] right-0 z-[1000]">
-                      <EmojiPicker onEmojiClick={(d: any) => setMsgInput(p => p + d.emoji)} autoFocusSearch={false}
-                        theme={typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "dark" ? "dark" as any : "light" as any} />
+            {/* Reply bar and Input */}
+            {canPostInChannel ? (
+              <>
+                {replyingTo && (
+                  <div className="mx-[20px] mb-2 p-2 bg-[var(--bg-secondary)] rounded-lg flex items-center justify-between border border-[var(--border-color)]">
+                    <span className="text-[0.75rem] text-[var(--text-muted)]">Replying to {getSenderName(replyingTo.senderId)}: {replyingTo.content?.slice(0, 60)}</span>
+                    <button onClick={() => setReplyingTo(null)} className="text-[var(--text-muted)] hover:text-red-500"><i className="fa-solid fa-xmark"></i></button>
+                  </div>
+                )}
+                <div className="p-[12px_20px] bg-[var(--sidebar-bg)] border-t border-[var(--border-color)] flex items-center gap-[10px] relative">
+                  <input type="file" className="hidden" ref={fileInputRef} onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
+                  <div onClick={() => fileInputRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-[var(--bg-main)] cursor-pointer text-[var(--text-muted)] hover:text-[var(--primary-green)] hover:bg-[var(--primary-light)]"><i className="fa-solid fa-paperclip text-sm"></i></div>
+                  <div className="flex-1 bg-[var(--bg-main)] p-[4px_12px] rounded-[12px] flex items-center border border-[var(--border-color)]">
+                    <textarea
+                      className="flex-1 px-2 py-2 bg-transparent border-none focus:outline-none resize-none overflow-hidden min-h-[40px] max-h-[120px] text-[var(--text-main)] text-[0.9rem]"
+                      placeholder="Type a message... (Ctrl+Enter for new line)"
+                      value={msgInput}
+                      onChange={e => {
+                        setMsgInput(e.target.value);
+                        handleTyping();
+                        e.target.style.height = 'auto';
+                        e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && !e.ctrlKey && !e.shiftKey) {
+                          e.preventDefault();
+                          sendMsg();
+                          e.currentTarget.style.height = 'auto';
+                        } else if (e.key === "Enter" && e.ctrlKey) {
+                          e.preventDefault();
+                          setMsgInput(prev => prev + "\n");
+                        }
+                      }}
+                      rows={1}
+                    />
+                    <div className="relative" ref={emojiPickerRef}>
+                      <i className={`fa-regular fa-face-smile text-[var(--text-muted)] cursor-pointer hover:text-[var(--primary-green)] ${showEmojiPicker ? "text-[var(--primary-green)]" : ""}`}
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}></i>
+                      {showEmojiPicker && (
+                        <div className="absolute bottom-[45px] right-0 z-[1000]">
+                          <EmojiPicker onEmojiClick={(d: any) => setMsgInput(p => p + d.emoji)} autoFocusSearch={false}
+                            theme={typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "dark" ? "dark" as any : "light" as any} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {isRecording ? (
+                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-[10px] px-2 py-1">
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span>
+                      <span className="text-[0.75rem] font-mono font-bold text-red-600 min-w-[36px]">
+                        {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, "0")}
+                      </span>
+                      <button
+                        onClick={() => {
+                          mediaRecorderRef.current?.stop();
+                          setIsRecording(false);
+                          if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+                          setRecordingTime(0);
+                        }}
+                        title="Cancel recording"
+                        className="text-gray-400 hover:text-red-500 transition text-xs"
+                      >
+                        <i className="fa-solid fa-xmark"></i>
+                      </button>
+                      <button
+                        onClick={toggleRecording}
+                        title="Stop and send"
+                        className="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition"
+                      >
+                        <i className="fa-solid fa-stop text-[0.65rem]"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={toggleRecording}
+                      title="Record voice memo"
+                      className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-[var(--primary-green)] hover:bg-[var(--primary-light)] transition"
+                    >
+                      <i className="fa-solid fa-microphone text-sm"></i>
+                    </button>
+                  )}
+                  {uploadProgress > 0 && uploadProgress < 100 && (
+                    <div className="w-8 h-8 flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-[var(--primary-green)] border-t-transparent rounded-full animate-spin"></div>
                     </div>
                   )}
+                  <button onClick={() => sendMsg()} className="w-[40px] h-[40px] bg-[var(--primary-green)] text-white border-none rounded-[10px] cursor-pointer flex items-center justify-center text-[1rem] hover:scale-105 hover:bg-[#154735] transition">
+                    <i className="fa-solid fa-paper-plane"></i>
+                  </button>
                 </div>
+              </>
+            ) : (
+              <div className="p-[12px_20px] bg-[var(--sidebar-bg)] border-t border-[var(--border-color)] flex items-center justify-center">
+                <span className="text-[0.85rem] text-[var(--text-muted)] font-medium">Only admins and managers can post in this channel.</span>
               </div>
-              {isRecording ? (
-                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-[10px] px-2 py-1">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span>
-                  <span className="text-[0.75rem] font-mono font-bold text-red-600 min-w-[36px]">
-                    {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, "0")}
-                  </span>
-                  <button
-                    onClick={() => {
-                      mediaRecorderRef.current?.stop();
-                      setIsRecording(false);
-                      if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
-                      setRecordingTime(0);
-                    }}
-                    title="Cancel recording"
-                    className="text-gray-400 hover:text-red-500 transition text-xs"
-                  >
-                    <i className="fa-solid fa-xmark"></i>
-                  </button>
-                  <button
-                    onClick={toggleRecording}
-                    title="Stop and send"
-                    className="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition"
-                  >
-                    <i className="fa-solid fa-stop text-[0.65rem]"></i>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={toggleRecording}
-                  title="Record voice memo"
-                  className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-[var(--primary-green)] hover:bg-[var(--primary-light)] transition"
-                >
-                  <i className="fa-solid fa-microphone text-sm"></i>
-                </button>
-              )}
-              {uploadProgress > 0 && uploadProgress < 100 && (
-                <div className="w-8 h-8 flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-[var(--primary-green)] border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              )}
-              <button onClick={() => sendMsg()} className="w-[40px] h-[40px] bg-[var(--primary-green)] text-white border-none rounded-[10px] cursor-pointer flex items-center justify-center text-[1rem] hover:scale-105 hover:bg-[#154735] transition">
-                <i className="fa-solid fa-paper-plane"></i>
-              </button>
-            </div>
+            )}
             
             {/* Member Directory Sidebar */}
             {showMemberDirectory && activeConv.type !== "direct" && (

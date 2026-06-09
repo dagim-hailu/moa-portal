@@ -9,11 +9,15 @@ import { v2 as cloudinary } from "cloudinary";
 import * as streamifier from "streamifier";
 import { JwtAuthGuard } from "./auth/jwt.guard";
 import { DatabaseService } from "../db/database.service";
+import { ChatGateway } from "./chat.gateway";
 import { existsSync, mkdirSync } from "fs";
 
 @Controller("api/chat")
 export class ChatController {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get("history")
@@ -51,9 +55,15 @@ export class ChatController {
 
   @UseGuards(JwtAuthGuard)
   @Post("rooms")
-  async createRoom(@Req() req: any, @Body() body: { name: string; type: string; avatarUrl?: string; description?: string }) {
+  async createRoom(@Req() req: any, @Body() body: { name: string; type: string; avatarUrl?: string; description?: string; memberIds?: string[] }) {
     const room = await this.database.createRoom({ name: body.name, type: body.type, avatarUrl: body.avatarUrl, description: body.description, createdBy: req.user.sub });
     await this.database.addRoomMember(room.id, req.user.sub, "admin");
+    const extraMembers = body.memberIds || [];
+    for (const uid of extraMembers) {
+      if (uid !== req.user.sub) await this.database.addRoomMember(room.id, uid, "member");
+    }
+    const allMemberIds = [req.user.sub, ...extraMembers.filter(u => u !== req.user.sub)];
+    this.chatGateway.broadcastRoomCreated({ ...room, name: room.name ?? "" }, allMemberIds);
     return room;
   }
 

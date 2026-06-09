@@ -8,12 +8,15 @@ const LOGOUT_MUTATION = `
   }
 `;
 
-async function clearCookies(request: NextRequest) {
+async function doLogout(request: NextRequest) {
   const refreshToken = request.cookies.get(REFRESH_COOKIE_NAME)?.value;
   if (refreshToken) {
     await runGraphql(LOGOUT_MUTATION, { refreshToken }).catch(() => null);
   }
+}
 
+export async function GET(request: NextRequest) {
+  await doLogout(request);
   const response = NextResponse.redirect(new URL("/login", request.url));
   response.cookies.set(ACCESS_COOKIE_NAME, "", { path: "/", maxAge: 0 });
   response.cookies.set(REFRESH_COOKIE_NAME, "", { path: "/", maxAge: 0 });
@@ -21,10 +24,11 @@ async function clearCookies(request: NextRequest) {
   return response;
 }
 
-export async function GET(request: NextRequest) {
-  return clearCookies(request);
-}
-
 export async function POST(request: NextRequest) {
-  return clearCookies(request);
+  await doLogout(request);
+  const response = NextResponse.json({ success: true });
+  response.cookies.set(ACCESS_COOKIE_NAME, "", { path: "/", maxAge: 0 });
+  response.cookies.set(REFRESH_COOKIE_NAME, "", { path: "/", maxAge: 0 });
+  response.cookies.set("moa_locale", "", { path: "/", maxAge: 0 });
+  return response;
 }
