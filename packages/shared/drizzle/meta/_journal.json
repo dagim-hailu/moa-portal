@@ -50,6 +50,13 @@
       "when": 1780647913200,
       "tag": "0006_flat_ben_urich",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782198546675,
+      "tag": "0007_naive_vance_astro",
+      "breakpoints": true
     }
   ]
 }

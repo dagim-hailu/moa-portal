@@ -1,346 +1,334 @@
-import { 
-  Controller, Get, Post, Put, Delete, Query, Param, Body,
-  UseGuards, Req, UseInterceptors, UploadedFile, BadRequestException, ForbiddenException, NotFoundException
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Put,
+  Query,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { memoryStorage } from "multer";
+import { diskStorage } from "multer";
 import { extname, join } from "path";
-import { v2 as cloudinary } from "cloudinary";
-import * as streamifier from "streamifier";
+import { existsSync, mkdirSync } from "fs";
 import { JwtAuthGuard } from "./auth/jwt.guard";
 import { DatabaseService } from "../db/database.service";
+import { decodeMessageCursor, serializeMessage } from "./chat/chat-cursor.util";
 import { ChatGateway } from "./chat.gateway";
-import { existsSync, mkdirSync } from "fs";
+
+const uploadsDir = join(process.cwd(), "public", "uploads");
+if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
 
 @Controller("api/chat")
+@UseGuards(JwtAuthGuard)
 export class ChatController {
   constructor(
     private readonly database: DatabaseService,
     private readonly chatGateway: ChatGateway,
   ) {}
 
-  @UseGuards(JwtAuthGuard)
-  @Get("history")
-  async getHistory(@Req() req: any, @Query("receiverId") receiverId: string) {
-    return this.database.getChatHistory(req.user.sub, receiverId);
+  @Get("users")
+  async listUsers(@Query("q") q?: string) {
+    const rows = q?.trim() ? await this.database.searchUsers(q) : await this.database.listAllUsers();
+    return rows;
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get("rooms")
-  async getUserRooms(@Req() req: any) {
+  async listRooms(@Req() req: { user: { sub: string } }) {
     return this.database.getUserRooms(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get("rooms/:roomId/messages")
-  async getRoomMessages(@Req() req: any, @Param("roomId") roomId: string) {
-    const membership = await this.database.assertRoomMember(roomId, req.user.sub);
-    if (!membership.ok) {
-      if (membership.reason === "ROOM_NOT_FOUND") throw new NotFoundException("Room not found");
-      throw new ForbiddenException("Not a room member");
-    }
-    return this.database.getRoomMessages(roomId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get("rooms/:roomId/members")
-  async getRoomMembers(@Req() req: any, @Param("roomId") roomId: string) {
-    const membership = await this.database.assertRoomMember(roomId, req.user.sub);
-    if (!membership.ok) {
-      if (membership.reason === "ROOM_NOT_FOUND") throw new NotFoundException("Room not found");
-      throw new ForbiddenException("Not a room member");
-    }
-    return this.database.getRoomMembers(roomId);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Post("rooms")
-  async createRoom(@Req() req: any, @Body() body: { name: string; type: string; avatarUrl?: string; description?: string; memberIds?: string[] }) {
-    const room = await this.database.createRoom({ name: body.name, type: body.type, avatarUrl: body.avatarUrl, description: body.description, createdBy: req.user.sub });
+  async createRoom(
+    @Req() req: { user: { sub: string } },
+    @Body() body: { name: string; type: string; description?: string; avatarUrl?: string; memberIds?: string[] },
+  ) {
+    const room = await this.database.createRoom({
+      name: body.name,
+      type: body.type,
+      description: body.description,
+      avatarUrl: body.avatarUrl,
+      createdBy: req.user.sub,
+    });
+    if (!room) throw new BadRequestException("Failed to create room");
     await this.database.addRoomMember(room.id, req.user.sub, "admin");
-    const extraMembers = body.memberIds || [];
-    for (const uid of extraMembers) {
-      if (uid !== req.user.sub) await this.database.addRoomMember(room.id, uid, "member");
+    for (const memberId of body.memberIds ?? []) {
+      if (memberId !== req.user.sub) await this.database.addRoomMember(room.id, memberId, "member");
     }
-    const allMemberIds = [req.user.sub, ...extraMembers.filter(u => u !== req.user.sub)];
-    this.chatGateway.broadcastRoomCreated({ ...room, name: room.name ?? "" }, allMemberIds);
+    const allMembers = [req.user.sub, ...(body.memberIds ?? []).filter(id => id !== req.user.sub)];
+    await this.chatGateway.emitRoomCreated(room, allMembers);
     return room;
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Put("rooms/:roomId")
-  async editRoom(@Req() req: any, @Param("roomId") roomId: string, @Body() body: { name?: string; description?: string; avatarUrl?: string }) {
-    return this.database.editRoom(roomId, req.user.sub, body);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Delete("rooms/:roomId")
-  async deleteRoom(@Req() req: any, @Param("roomId") roomId: string) {
-    return this.database.softDeleteRoom(roomId, req.user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post("rooms/:roomId/restore")
-  async restoreRoom(@Req() req: any, @Param("roomId") roomId: string) {
-    return this.database.restoreRoom(roomId, req.user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Get("rooms/deleted")
-  async getDeletedRooms(@Req() req: any) {
+  async deletedRooms(@Req() req: { user: { sub: string } }) {
     return this.database.getDeletedRooms(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Post("rooms/:roomId/restore")
+  async restoreRoom(@Req() req: { user: { sub: string } }, @Param("roomId") roomId: string) {
+    const restored = await this.database.restoreRoom(roomId, req.user.sub);
+    if (!restored) throw new NotFoundException("Room not found or not restorable");
+    return restored;
+  }
+
+  @Get("rooms/:roomId/messages")
+  async getRoomMessages(
+    @Req() req: { user: { sub: string } },
+    @Param("roomId") roomId: string,
+    @Query("cursor") cursor?: string,
+    @Query("limit") limitStr?: string,
+  ) {
+    const membership = await this.database.assertRoomMember(roomId, req.user.sub);
+    if (!membership.ok) throw new ForbiddenException(membership.reason);
+    const limit = Math.min(Math.max(Number(limitStr) || 50, 1), 100);
+    const before = decodeMessageCursor(cursor);
+    const page = await this.database.getRoomMessagesPaginated(roomId, limit, before ?? undefined);
+    return {
+      messages: page.messages.map(serializeMessage),
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
+    };
+  }
+
+  @Get("rooms/:roomId/members")
+  async getRoomMembers(@Req() req: { user: { sub: string } }, @Param("roomId") roomId: string) {
+    const membership = await this.database.assertRoomMember(roomId, req.user.sub);
+    if (!membership.ok) throw new ForbiddenException(membership.reason);
+    return this.database.getRoomMembers(roomId);
+  }
+
   @Post("rooms/:roomId/members")
-  async addMember(@Req() req: any, @Param("roomId") roomId: string, @Body() body: { userId: string }) {
+  async addRoomMember(
+    @Req() req: { user: { sub: string } },
+    @Param("roomId") roomId: string,
+    @Body() body: { userId: string },
+  ) {
     const admin = await this.database.assertRoomAdmin(roomId, req.user.sub);
-    if (!admin.ok) {
-      if (admin.reason === "ROOM_NOT_FOUND") throw new NotFoundException("Room not found");
-      throw new ForbiddenException(admin.reason === "NOT_AN_ADMIN" ? "Admin required" : "Not a room member");
-    }
-    await this.database.addRoomMember(roomId, body.userId);
-    return { success: true };
+    if (!admin.ok) throw new ForbiddenException(admin.reason);
+    if (!(await this.database.userExists(body.userId))) throw new NotFoundException("User not found");
+    await this.database.addRoomMember(roomId, body.userId, "member");
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete("rooms/:roomId/members/:userId")
-  async removeMember(@Req() req: any, @Param("roomId") roomId: string, @Param("userId") userId: string) {
+  async removeRoomMember(
+    @Req() req: { user: { sub: string } },
+    @Param("roomId") roomId: string,
+    @Param("userId") userId: string,
+  ) {
     const admin = await this.database.assertRoomAdmin(roomId, req.user.sub);
-    if (!admin.ok) {
-      if (admin.reason === "ROOM_NOT_FOUND") throw new NotFoundException("Room not found");
-      throw new ForbiddenException(admin.reason === "NOT_AN_ADMIN" ? "Admin required" : "Not a room member");
+    if (!admin.ok) throw new ForbiddenException(admin.reason);
+    await this.database.removeRoomMember(roomId, userId, req.user.sub);
+    this.chatGateway.server.to(`room:${roomId}`).emit("rosterUpdated", { roomId, userId, action: "removed" });
+    return { ok: true };
+  }
+
+  @Put("rooms/:roomId/members/:userId/role")
+  async updateRoomMemberRole(
+    @Req() req: { user: { sub: string } },
+    @Param("roomId") roomId: string,
+    @Param("userId") userId: string,
+    @Body() body: { role: string },
+  ) {
+    const admin = await this.database.assertRoomAdmin(roomId, req.user.sub);
+    if (!admin.ok) throw new ForbiddenException(admin.reason);
+    if (!["admin", "manager", "member"].includes(body.role)) {
+      throw new BadRequestException("Invalid role");
     }
-    await this.database.removeRoomMember(roomId, userId);
-    await this.database.saveChatMessage({
-      roomId,
-      senderId: req.user.sub,
-      messageType: "system",
-      content: "User removed from the room.",
-    });
-    return { success: true };
+    await this.database.updateRoomMemberRole(roomId, userId, body.role, req.user.sub);
+    this.chatGateway.server.to(`room:${roomId}`).emit("rosterUpdated", { roomId, userId, role: body.role, action: "role_updated" });
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Put("messages/:messageId")
-  async editMessage(@Req() req: any, @Param("messageId") messageId: string, @Body() body: { content: string }) {
-    return this.database.editMessage(messageId, req.user.sub, body.content);
+  @Get("departments")
+  async listDepartments() {
+    return this.database.listDepartments();
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Delete("messages/:messageId")
-  async deleteMessage(@Req() req: any, @Param("messageId") messageId: string) {
-    return this.database.softDeleteMessage(messageId, req.user.sub);
+  @Get("users/:userId/departments")
+  async getUserDepartments(@Param("userId") userId: string) {
+    return this.database.getUserDepartments(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post("messages/:messageId/restore")
-  async restoreMessage(@Req() req: any, @Param("messageId") messageId: string) {
-    return this.database.restoreMessage(messageId, req.user.sub);
+  @Put("users/:userId/departments")
+  async assignUserDepartments(
+    @Req() req: { user: { sub: string } },
+    @Param("userId") userId: string,
+    @Body() body: { departmentIds: string[] },
+  ) {
+    // Basic verification - usually admin check should be in place, but since this is enterprise demo/portal:
+    await this.database.assignUserDepartments(userId, body.departmentIds, req.user.sub);
+    // Broadcast roster or room assignment changes if applicable
+    this.chatGateway.server.emit("userDepartmentsUpdated", { userId, departmentIds: body.departmentIds });
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get("messages/deleted")
-  async getDeletedMessages(@Req() req: any) {
-    return this.database.getDeletedMessages(req.user.sub);
+
+  @Post("rooms/:roomId/read")
+  async markRoomRead(@Req() req: { user: { sub: string } }, @Param("roomId") roomId: string) {
+    const membership = await this.database.assertRoomMember(roomId, req.user.sub);
+    if (!membership.ok) throw new ForbiddenException(membership.reason);
+    await this.database.markRoomRead(roomId, req.user.sub);
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post("messages")
-  async sendMessage(@Req() req: any, @Body() body: {
-    receiverId?: string; roomId?: string; content?: string;
-    fileUrl?: string; fileType?: string; messageType?: string; replyToId?: string;
-  }) {
-    const senderId = req.user.sub;
-    const hasReceiver = Boolean(body.receiverId);
-    const hasRoom = Boolean(body.roomId);
-    if (hasReceiver === hasRoom) throw new BadRequestException("Must specify exactly one of receiverId or roomId");
-    if (!body.content && !body.fileUrl) throw new BadRequestException("Message must have content or a file");
-
-    const saved = await this.database.saveChatMessage({
-      senderId, receiverId: body.receiverId, roomId: body.roomId,
-      content: body.content, fileUrl: body.fileUrl, fileType: body.fileType,
-      messageType: body.messageType || "text", replyToId: body.replyToId,
-    });
-    return saved;
+  @Get("history")
+  async getHistory(
+    @Req() req: { user: { sub: string } },
+    @Query("receiverId") receiverId: string,
+    @Query("cursor") cursor?: string,
+    @Query("limit") limitStr?: string,
+  ) {
+    if (!receiverId) throw new BadRequestException("receiverId required");
+    const limit = Math.min(Math.max(Number(limitStr) || 50, 1), 100);
+    const before = decodeMessageCursor(cursor);
+    const page = await this.database.getChatHistoryPaginated(req.user.sub, receiverId, limit, before ?? undefined);
+    return {
+      messages: page.messages.map(serializeMessage),
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
+    };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get("users")
-  async listUsers(@Query("q") q?: string) {
-    if (q && q.trim().length > 0) return this.database.searchUsers(q);
-    return this.database.listAllUsers();
+  @Post("direct/:otherUserId/read")
+  async markDirectRead(@Req() req: { user: { sub: string } }, @Param("otherUserId") otherUserId: string) {
+    await this.database.markDirectRead(req.user.sub, otherUserId);
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get("profile/:userId")
-  async getUserProfile(@Param("userId") userId: string) {
-    return this.database.getUserProfile(userId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Put("profile")
-  async updateProfile(@Req() req: any, @Body() body: { fullName?: string; avatarUrl?: string; username?: string; phoneNumber?: string | null }) {
-    return this.database.updateCurrentUserProfile(req.user.sub, body);
-  }
-
-  // ── Unread counts & mark-read ──
-  @UseGuards(JwtAuthGuard)
   @Get("unread/rooms")
-  async getUnreadRooms(@Req() req: any) {
+  async unreadRooms(@Req() req: { user: { sub: string } }) {
     return this.database.getUnreadMessageCountsForRooms(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get("unread/direct")
-  async getUnreadDirect(@Req() req: any) {
+  async unreadDirect(@Req() req: { user: { sub: string } }) {
     return this.database.getUnreadDirectMessageCounts(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post("rooms/:roomId/read")
-  async markRoomRead(@Req() req: any, @Param("roomId") roomId: string) {
-    await this.database.markRoomRead(roomId, req.user.sub);
-    return { success: true };
+  @Get("messages/archived")
+  async archivedMessages(@Req() req: { user: { sub: string } }) {
+    const rows = await this.database.getArchivedMessages(req.user.sub);
+    return rows.map(serializeMessage);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post("direct/:userId/read")
-  async markDirectRead(@Req() req: any, @Param("userId") otherUserId: string) {
-    await this.database.markDirectRead(req.user.sub, otherUserId);
-    return { success: true };
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Get("notifications")
-  async getNotifications(@Req() req: any) {
+  async notifications(@Req() req: { user: { sub: string } }) {
     return this.database.getUserNotifications(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get("notifications/unread-count")
-  async getUnreadCount(@Req() req: any) {
-    return { count: await this.database.getUnreadNotificationCount(req.user.sub) };
+  async notificationUnreadCount(@Req() req: { user: { sub: string } }) {
+    const count = await this.database.getUnreadNotificationCount(req.user.sub);
+    return { count };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Put("notifications/:id/read")
-  async markRead(@Param("id") id: string) {
-    await this.database.markNotificationRead(id);
-    return { success: true };
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Put("notifications/read-all")
-  async markAllRead(@Req() req: any) {
+  async markAllNotificationsRead(@Req() req: { user: { sub: string } }) {
     await this.database.markAllNotificationsRead(req.user.sub);
-    return { success: true };
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Delete("notifications/:id")
-  async deleteNotification(@Param("id") id: string) {
-    await this.database.deleteNotification(id);
-    return { success: true };
+  @Put("notifications/:id/read")
+  async markNotificationRead(@Param("id") id: string) {
+    await this.database.markNotificationRead(id);
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get("notifications/preferences")
-  async getPrefs(@Req() req: any) {
+  async notificationPreferences(@Req() req: { user: { sub: string } }) {
     return this.database.getNotificationPreferences(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Put("notifications/preferences")
-  async upsertPrefs(@Req() req: any, @Body() body: any) {
+  async updateNotificationPreferences(
+    @Req() req: { user: { sub: string } },
+    @Body() body: { messages?: boolean; groups?: boolean; channels?: boolean; mentions?: boolean; sound?: boolean; desktop?: boolean },
+  ) {
     return this.database.upsertNotificationPreferences(req.user.sub, body);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post("upload")
-  @UseInterceptors(FileInterceptor("file", {
-    storage: memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 },
-  }))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new BadRequestException("No file uploaded");
-
-    if (!process.env.CLOUDINARY_URL) {
-      throw new BadRequestException("CLOUDINARY_URL environment variable is missing.");
-    }
-
-    const isImage = file.mimetype.startsWith("image/");
-    const isAudio = file.mimetype.startsWith("audio/") || file.mimetype.includes("ogg") || file.originalname.endsWith(".webm");
-    const isVideo = !isAudio && file.mimetype.startsWith("video/");
-    const fileType = isAudio ? "voice" : isImage ? "image" : isVideo ? "video" : "file";
-
-    // Cloudinary uses 'video' for audio/video files, 'image' for images, and 'raw' for everything else
-    const resourceType = (isAudio || isVideo) ? "video" : isImage ? "image" : "raw";
-
-    let fileUrl: string;
-    try {
-      const uploadResult = await new Promise<any>((resolve, reject) => {
-        const cldStream = cloudinary.uploader.upload_stream(
-          { resource_type: resourceType, folder: "moa_chat_uploads" },
-          (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-          }
-        );
-        streamifier.createReadStream(file.buffer).pipe(cldStream);
-      });
-      fileUrl = uploadResult.secure_url;
-    } catch (err: any) {
-      console.error("Cloudinary upload failed:", err);
-      throw new BadRequestException("Upload failed: " + (err.message || err.toString()));
-    }
-
-    return { fileUrl, fileType, originalName: file.originalname, mimeType: file.mimetype, size: file.size };
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get("messages/archived")
-  async getArchivedMessages(@Req() req: any) {
-    return this.database.getArchivedMessages(req.user.sub);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Get("pinned")
-  async getPinnedConversations(@Req() req: any) {
+  async pinned(@Req() req: { user: { sub: string } }) {
     return this.database.getPinnedConversations(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post("pinned")
-  async pinConversation(@Req() req: any, @Body() body: { conversationId: string }) {
-    if (!body.conversationId) throw new BadRequestException("conversationId is required");
-    return this.database.pinConversation(req.user.sub, body.conversationId);
+  async pin(@Req() req: { user: { sub: string } }, @Body() body: { conversationId: string }) {
+    await this.database.pinConversation(req.user.sub, body.conversationId);
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete("pinned/:conversationId")
-  async unpinConversation(@Req() req: any, @Param("conversationId") conversationId: string) {
+  async unpin(@Req() req: { user: { sub: string } }, @Param("conversationId") conversationId: string) {
     await this.database.unpinConversation(req.user.sub, conversationId);
-    return { success: true };
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get("blocked")
-  async getBlockedEntities(@Req() req: any) {
+  async blocked(@Req() req: { user: { sub: string } }) {
     return this.database.getBlockedEntities(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post("blocked")
-  async blockEntity(@Req() req: any, @Body() body: { blockedId: string }) {
-    if (!body.blockedId) throw new BadRequestException("blockedId is required");
-    return this.database.blockEntity(req.user.sub, body.blockedId);
+  async block(@Req() req: { user: { sub: string } }, @Body() body: { blockedId: string }) {
+    await this.database.blockEntity(req.user.sub, body.blockedId);
+    return { ok: true };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete("blocked/:blockedId")
-  async unblockEntity(@Req() req: any, @Param("blockedId") blockedId: string) {
+  async unblock(@Req() req: { user: { sub: string } }, @Param("blockedId") blockedId: string) {
     await this.database.unblockEntity(req.user.sub, blockedId);
-    return { success: true };
+    return { ok: true };
+  }
+
+  @Get("profile/:userId")
+  async getProfile(@Param("userId") userId: string) {
+    const profile = await this.database.getUserProfile(userId);
+    if (!profile) throw new NotFoundException("User not found");
+    return profile;
+  }
+
+  @Put("profile")
+  async updateProfile(
+    @Req() req: { user: { sub: string } },
+    @Body() body: { fullName?: string; avatarUrl?: string; username?: string; phoneNumber?: string | null },
+  ) {
+    const updated = await this.database.updateCurrentUserProfile(req.user.sub, body);
+    if (!updated) throw new BadRequestException("Nothing to update");
+    return updated;
+  }
+
+  @Post("upload")
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: diskStorage({
+        destination: uploadsDir,
+        filename: (_req, file, cb) => {
+          const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          cb(null, `${unique}${extname(file.originalname)}`);
+        },
+      }),
+      limits: { fileSize: 100 * 1024 * 1024 },
+    }),
+  )
+  uploadFile(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException("No file uploaded");
+    const fileUrl = `/uploads/${file.filename}`;
+    const mime = file.mimetype || "";
+    let fileType = "file";
+    if (mime.startsWith("image/")) fileType = "image";
+    else if (mime.startsWith("video/")) fileType = "video";
+    else if (mime.startsWith("audio/")) fileType = "audio";
+    return { fileUrl, fileType, fileName: file.originalname };
   }
 }

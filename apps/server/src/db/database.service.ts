@@ -18,6 +18,10 @@ import {
   notificationPreferences,
   chatPinnedConversations,
   chatBlockedEntities,
+  departments,
+  userDepartments,
+  chatMessageDeletions,
+  chatAuditEvents,
 } from "@moa/shared/db";
 
 @Injectable()
@@ -27,6 +31,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     users, applications, userApplications, authSessions, auditLogs,
     contactMessages, portalAnnouncements, chatMessages, chatRooms,
     chatRoomMembers, chatDirectReadStatus, notifications, notificationPreferences,
+    chatPinnedConversations, chatBlockedEntities, departments, userDepartments,
+    chatMessageDeletions, chatAuditEvents,
   };
   db!: NodePgDatabase<typeof this.schemaObj>;
 
@@ -580,6 +586,82 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     return rows;
   }
 
+  async getRoomMessagesPaginated(
+    roomId: string,
+    limit = 50,
+    before?: { createdAt: string; id: string },
+  ) {
+    let where = and(eq(chatMessages.roomId, roomId), isNull(chatMessages.deletedAt));
+    if (before) {
+      const cursorDate = new Date(before.createdAt);
+      where = and(
+        where,
+        or(
+          lt(chatMessages.createdAt, cursorDate),
+          and(eq(chatMessages.createdAt, cursorDate), lt(chatMessages.id, before.id)),
+        ),
+      );
+    }
+    const rows = await this.db
+      .select()
+      .from(chatMessages)
+      .where(where)
+      .orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
+      .limit(limit + 1);
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const oldest = page[page.length - 1];
+    return {
+      messages: [...page].reverse(),
+      nextCursor: hasMore && oldest
+        ? Buffer.from(JSON.stringify({ createdAt: oldest.createdAt.toISOString(), id: oldest.id }), "utf8").toString("base64url")
+        : null,
+      hasMore,
+    };
+  }
+
+  async getChatHistoryPaginated(
+    userA: string,
+    userB: string,
+    limit = 50,
+    before?: { createdAt: string; id: string },
+  ) {
+    let where = and(
+      isNull(chatMessages.roomId),
+      isNull(chatMessages.deletedAt),
+      or(
+        and(eq(chatMessages.senderId, userA), eq(chatMessages.receiverId, userB)),
+        and(eq(chatMessages.senderId, userB), eq(chatMessages.receiverId, userA)),
+      ),
+    );
+    if (before) {
+      const cursorDate = new Date(before.createdAt);
+      where = and(
+        where,
+        or(
+          lt(chatMessages.createdAt, cursorDate),
+          and(eq(chatMessages.createdAt, cursorDate), lt(chatMessages.id, before.id)),
+        ),
+      );
+    }
+    const rows = await this.db
+      .select()
+      .from(chatMessages)
+      .where(where)
+      .orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
+      .limit(limit + 1);
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const oldest = page[page.length - 1];
+    return {
+      messages: [...page].reverse(),
+      nextCursor: hasMore && oldest
+        ? Buffer.from(JSON.stringify({ createdAt: oldest.createdAt.toISOString(), id: oldest.id }), "utf8").toString("base64url")
+        : null,
+      hasMore,
+    };
+  }
+
   async editMessage(messageId: string, userId: string, content: string) {
     const [updated] = await this.db
       .update(chatMessages)
@@ -707,8 +789,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   }
 
   async softDeleteRoom(roomId: string, actorUserId: string) {
-    const [room] = await this.db.select({ createdBy: chatRooms.createdBy }).from(chatRooms).where(eq(chatRooms.id, roomId)).limit(1);
-    if (!room) return null;
+    const [room] = await this.db.select({ createdBy: chatRooms.createdBy, isSystem: chatRooms.isSystem }).from(chatRooms).where(eq(chatRooms.id, roomId)).limit(1);
+    if (!room || room.isSystem) return null;
     const isAdmin = await this.db
       .select({ role: chatRoomMembers.role })
       .from(chatRoomMembers)
@@ -751,11 +833,117 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       .onConflictDoNothing();
   }
 
-  async removeRoomMember(roomId: string, userId: string) {
+  async updateRoomMemberRole(roomId: string, userId: string, role: string, actorId?: string) {
+    await this.db
+      .update(chatRoomMembers)
+      .set({ role })
+      .where(and(eq(chatRoomMembers.roomId, roomId), eq(chatRoomMembers.userId, userId)));
+
+    if (actorId) {
+      await this.db.insert(chatAuditEvents).values({
+        roomId,
+        eventType: "role_changed",
+        actorId,
+        targetUserId: userId,
+        payload: { newRole: role },
+      });
+    }
+  }
+
+  async removeRoomMember(roomId: string, userId: string, actorId?: string) {
     await this.db
       .delete(chatRoomMembers)
       .where(and(eq(chatRoomMembers.roomId, roomId), eq(chatRoomMembers.userId, userId)));
+
+    if (actorId) {
+      await this.db.insert(chatAuditEvents).values({
+        roomId,
+        eventType: "member_removed",
+        actorId,
+        targetUserId: userId,
+        payload: { removedUserId: userId },
+      });
+
+      const [targetUser] = await this.db.select().from(users).where(eq(users.id, userId));
+      const [adminUser] = await this.db.select().from(users).where(eq(users.id, actorId));
+      if (targetUser && adminUser) {
+        await this.db.insert(chatMessages).values({
+          roomId,
+          senderId: actorId,
+          messageType: "system",
+          content: `${targetUser.fullName} was removed by ${adminUser.fullName}`,
+        });
+      }
+    }
   }
+
+  async assignUserDepartments(userId: string, departmentIds: string[], assignedBy?: string) {
+    await this.db.delete(userDepartments).where(eq(userDepartments.userId, userId));
+
+    if (departmentIds.length > 0) {
+      const values = departmentIds.map((deptId) => ({
+        userId,
+        departmentId: deptId,
+        assignedBy: assignedBy ?? null,
+      }));
+      await this.db.insert(userDepartments).values(values);
+    }
+
+    const allDepts = await this.db.select().from(departments);
+    for (const dept of allDepts) {
+      const shouldBeInDept = departmentIds.includes(dept.id);
+      let [room] = await this.db
+        .select()
+        .from(chatRooms)
+        .where(
+          and(
+            eq(chatRooms.departmentId, dept.id),
+            eq(chatRooms.isSystem, true),
+            eq(chatRooms.systemType, "department")
+          )
+        )
+        .limit(1);
+
+      if (!room && shouldBeInDept) {
+        const [newRoom] = await this.db
+          .insert(chatRooms)
+          .values({
+            name: `Department: ${dept.nameEn}`,
+            type: "group",
+            isSystem: true,
+            systemType: "department",
+            departmentId: dept.id,
+            createdBy: assignedBy ?? null,
+          })
+          .returning();
+        room = newRoom;
+      }
+
+      if (room) {
+        if (shouldBeInDept) {
+          await this.addRoomMember(room.id, userId, "member");
+        } else {
+          await this.db
+            .delete(chatRoomMembers)
+            .where(and(eq(chatRoomMembers.roomId, room.id), eq(chatRoomMembers.userId, userId)));
+        }
+      }
+    }
+  }
+
+  async listDepartments() {
+    return this.db.select().from(departments).orderBy(departments.nameEn);
+  }
+
+  async getUserDepartments(userId: string) {
+    return this.db
+      .select({
+        departmentId: userDepartments.departmentId,
+      })
+      .from(userDepartments)
+      .where(eq(userDepartments.userId, userId));
+  }
+
 
   async getRoomMembers(roomId: string) {
     return this.db

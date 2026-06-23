@@ -128,6 +128,8 @@ export default function ChatPage() {
 
   // Per-conversation message storage — keyed by conversation ID
   const messagesByConvRef = useRef<Map<string, Message[]>>(new Map());
+  const historyMetaRef = useRef<Map<string, { nextCursor: string | null; hasMore: boolean }>>(new Map());
+  const loadingHistoryRef = useRef<Set<string>>(new Set());
   const [messagesVersion, setMessagesVersion] = useState(0);
   const activeMessages = messagesByConvRef.current.get(activeConvId) || [];
 
@@ -145,6 +147,50 @@ export default function ChatPage() {
     messagesByConvRef.current.set(convId, [...existing, msg]);
     bumpMessages();
   }, []);
+
+  const mapApiMessage = useCallback((m: any): Message => ({
+    id: m.id, senderId: m.senderId, content: m.content,
+    fileUrl: m.fileUrl, fileType: m.fileType, messageType: m.messageType || "text",
+    replyToId: m.replyToId, editedAt: m.editedAt, deletedAt: m.deletedAt,
+    roomId: m.roomId, receiverId: m.receiverId,
+    voiceDuration: m.voiceDuration,
+    time: new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  }), []);
+
+  const loadConversationHistory = useCallback(async (convId: string, conv: Conversation, cursor?: string | null) => {
+    if (loadingHistoryRef.current.has(convId)) return;
+    loadingHistoryRef.current.add(convId);
+    try {
+      const isRoom = conv.type !== "direct";
+      const base = isRoom
+        ? `/api/chat/rooms/${convId}/messages`
+        : `/api/chat/history?receiverId=${convId}`;
+      const url = cursor ? `${base}${base.includes("?") ? "&" : "?"}cursor=${encodeURIComponent(cursor)}` : base;
+      const res = await fetch(url, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
+      if (!res.ok) {
+        console.error("History fetch failed:", res.status, await res.text());
+        return;
+      }
+      const data = await res.json();
+      const raw = Array.isArray(data) ? data : data.messages ?? [];
+      const msgs = raw.map(mapApiMessage);
+      const nextCursor = Array.isArray(data) ? null : data.nextCursor ?? null;
+      const hasMore = Array.isArray(data) ? false : Boolean(data.hasMore);
+      historyMetaRef.current.set(convId, { nextCursor, hasMore });
+      if (cursor) {
+        const existing = messagesByConvRef.current.get(convId) || [];
+        const merged = [...msgs, ...existing];
+        messagesByConvRef.current.set(convId, merged);
+      } else {
+        messagesByConvRef.current.set(convId, msgs);
+      }
+      bumpMessages();
+    } catch (e) {
+      console.error("History fetch error:", e);
+    } finally {
+      loadingHistoryRef.current.delete(convId);
+    }
+  }, [mapApiMessage]);
 
   const activeConv = conversations.find(c => c.id === activeConvId);
   const isRoomConv = activeConv?.type !== "direct";
@@ -290,6 +336,7 @@ export default function ChatPage() {
         // Doing this on initial connect clears the already-fetched HTTP history.
         if (!isInitialConnect) {
           messagesByConvRef.current.clear();
+          historyMetaRef.current.clear();
           setReconnectCount(c => c + 1);
         }
         isInitialConnect = false;
@@ -472,31 +519,22 @@ export default function ChatPage() {
       bumpMessages();
       return;
     }
-    (async () => {
-      try {
-        const isRoom = conv.type !== "direct";
-        const url = isRoom
-          ? `/api/chat/rooms/${activeConvId}/messages`
-          : `/api/chat/history?receiverId=${activeConvId}`;
-        console.log("Fetching history:", url);
-        const res = await fetch(url, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
-        if (!res.ok) {
-          console.error("History fetch failed:", res.status, await res.text());
-          return;
-        }
-        const data = await res.json();
-        const msgs: Message[] = (Array.isArray(data) ? data : []).map((m: any) => ({
-          id: m.id, senderId: m.senderId, content: m.content,
-          fileUrl: m.fileUrl, fileType: m.fileType, messageType: m.messageType || "text",
-          replyToId: m.replyToId, editedAt: m.editedAt, deletedAt: m.deletedAt,
-          roomId: m.roomId, receiverId: m.receiverId,
-          voiceDuration: m.voiceDuration,
-          time: new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        }));
-        setConvMessages(activeConvId, msgs);
-      } catch (e) { console.error("History fetch error:", e); }
-    })();
-  }, [activeConvId, currentUser, activeConv, reconnectCount]);
+    void loadConversationHistory(activeConvId, conv);
+  }, [activeConvId, currentUser, activeConv, reconnectCount, loadConversationHistory]);
+
+  // ── Load older messages when scrolling to top ──
+  useEffect(() => {
+    const el = chatBoxRef.current;
+    if (!el || !activeConvId || !activeConv) return;
+    const onScroll = () => {
+      if (el.scrollTop > 80) return;
+      const meta = historyMetaRef.current.get(activeConvId);
+      if (!meta?.hasMore || !meta.nextCursor) return;
+      void loadConversationHistory(activeConvId, activeConv, meta.nextCursor);
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [activeConvId, activeConv, loadConversationHistory]);
 
   // ── Load room members + current role ──
   useEffect(() => {

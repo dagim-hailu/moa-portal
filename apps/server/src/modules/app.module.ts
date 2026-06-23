@@ -25,6 +25,9 @@ import { DatabaseModule } from "../db/database.module";
       path: "/graphql",
       sortSchema: true,
       context: ({ req }: { req: { headers: Record<string, string | string[] | undefined> } }) => ({ req }),
+      subscriptions: {
+        'graphql-ws': true,
+      },
     }),
     AuthModule,
     RegistryModule,

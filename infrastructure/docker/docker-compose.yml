@@ -31,9 +31,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:-replace_me}
       MOA_SERVER_URL: http://server:4000
       DATABASE_URL: postgres://moa:moa@postgres:5432/moa_portal
+      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - server_uploads:/app/public/uploads
     expose:
@@ -143,6 +146,7 @@ services:
       DATABASE_URL: postgres://moa:moa@postgres:5432/moa_portal
       JWT_SECRET: ${JWT_SECRET:-moa_dev_jwt_secret_change_in_production}
       MOA_SERVER_URL: http://server-dev:4000
+      REDIS_URL: redis://redis:6379
       PORT: 4000
     command: sh -c "/workspace/apps/server/node_modules/.bin/nest start --watch"
     ports:
@@ -152,6 +156,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    profiles: ["dev", "prod"]
+    image: redis:7-alpine
+    hostname: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
 
   shell-dev:
     profiles: ["dev"]

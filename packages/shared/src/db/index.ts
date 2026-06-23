@@ -11,7 +11,28 @@ export const users = pgTable("users", {
   locale: text("locale").default("en").notNull(),
   avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  bio: text("bio"),
+  profileUpdatedAt: timestamp("profile_updated_at").defaultNow().notNull(),
 });
+
+export const departments = pgTable("departments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull().unique(),
+  nameEn: text("name_en").notNull(),
+  nameAm: text("name_am").notNull(),
+  parentId: uuid("parent_id").references((): any => departments.id, { onDelete: "cascade" }),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const userDepartments = pgTable("user_departments", {
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id, { onDelete: "cascade" }).notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  assignedBy: uuid("assigned_by").references(() => users.id, { onDelete: "set null" }),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.departmentId] }),
+}));
 
 export const chatRooms = pgTable("chat_rooms", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -23,6 +44,10 @@ export const chatRooms = pgTable("chat_rooms", {
   deletedAt: timestamp("deleted_at"),
   editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  departmentId: uuid("department_id").references(() => departments.id, { onDelete: "set null" }),
+  isSystem: boolean("is_system").default(false).notNull(),
+  systemType: text("system_type"),
+  creatorId: uuid("creator_id").references(() => users.id, { onDelete: "set null" }),
 });
 
 export const chatRoomMembers = pgTable("chat_room_members", {
@@ -56,6 +81,10 @@ export const chatMessages = pgTable("chat_messages", {
   deletedAt: timestamp("deleted_at"),
   editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  threadRootId: uuid("thread_root_id").references((): any => chatMessages.id, { onDelete: "cascade" }),
+  videoDuration: integer("video_duration"),
+  videoThumbnailUrl: text("video_thumbnail_url"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
 });
 
 export const applications = pgTable("applications", {
@@ -168,3 +197,27 @@ export const chatBlockedEntities = pgTable("chat_blocked_entities", {
 }, (table) => ({
   uniq: unique("chat_blocked_user_entity_idx").on(table.blockerId, table.blockedId),
 }));
+
+export const chatMessageDeletions = pgTable("chat_message_deletions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  messageId: uuid("message_id").notNull(),
+  conversationType: text("conversation_type").notNull(), // 'direct' | 'group' | 'channel'
+  conversationId: text("conversation_id").notNull(),
+  deletedBy: uuid("deleted_by").references(() => users.id).notNull(),
+  deletedAt: timestamp("deleted_at").defaultNow().notNull(),
+  originalContent: text("original_content"),
+  originalFileUrl: text("original_file_url"),
+  purgeAt: timestamp("purge_at"),
+  restoredAt: timestamp("restored_at"),
+  restoredBy: uuid("restored_by").references(() => users.id),
+});
+
+export const chatAuditEvents = pgTable("chat_audit_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  roomId: uuid("room_id").references(() => chatRooms.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(), // 'member_removed' | 'role_changed' | 'room_deleted'
+  actorId: uuid("actor_id").references(() => users.id).notNull(),
+  targetUserId: uuid("target_user_id").references(() => users.id),
+  payload: jsonb("payload").default({}).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
