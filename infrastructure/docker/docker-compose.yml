@@ -30,7 +30,7 @@ services:
       PORT: 4000
       JWT_SECRET: ${JWT_SECRET:-replace_me}
       MOA_SERVER_URL: http://server:4000
-      DATABASE_URL: postgres://moa:moa@postgres:5432/moa_portal
+      DATABASE_URL: ${DATABASE_URL:-postgres://moa:moa@postgres:5432/moa_portal}
       REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
@@ -143,7 +143,7 @@ services:
     volumes:
       - ../..:/workspace
     environment:
-      DATABASE_URL: postgres://moa:moa@postgres:5432/moa_portal
+      DATABASE_URL: ${DATABASE_URL:-postgres://moa:moa@postgres:5432/moa_portal}
       JWT_SECRET: ${JWT_SECRET:-moa_dev_jwt_secret_change_in_production}
       MOA_SERVER_URL: http://server-dev:4000
       REDIS_URL: redis://redis:6379

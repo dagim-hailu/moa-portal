@@ -165,9 +165,9 @@ export class ChatController {
     @Param("userId") userId: string,
     @Body() body: { departmentIds: string[] },
   ) {
-    // Basic verification - usually admin check should be in place, but since this is enterprise demo/portal:
+    const allowed = await this.database.canEditUserDepartments(req.user.sub, userId);
+    if (!allowed) throw new ForbiddenException("You are not authorized to edit this user's departments");
     await this.database.assignUserDepartments(userId, body.departmentIds, req.user.sub);
-    // Broadcast roster or room assignment changes if applicable
     this.chatGateway.server.emit("userDepartmentsUpdated", { userId, departmentIds: body.departmentIds });
     return { ok: true };
   }
@@ -292,10 +292,11 @@ export class ChatController {
   }
 
   @Get("profile/:userId")
-  async getProfile(@Param("userId") userId: string) {
+  async getProfile(@Req() req: { user: { sub: string } }, @Param("userId") userId: string) {
     const profile = await this.database.getUserProfile(userId);
     if (!profile) throw new NotFoundException("User not found");
-    return profile;
+    const canEditDepartments = await this.database.canEditUserDepartments(req.user.sub, userId);
+    return { ...profile, canEditDepartments };
   }
 
   @Put("profile")

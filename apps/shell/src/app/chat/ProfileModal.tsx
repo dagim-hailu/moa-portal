@@ -12,6 +12,8 @@ interface UserProfile {
   avatarUrl?: string | null;
   createdAt: string;
   groupsCount: number;
+  departments: Array<{ id: string; slug: string; nameEn: string; nameAm: string }>;
+  canEditDepartments?: boolean;
   sharedMedia: Array<{
     id: string;
     fileUrl: string;
@@ -42,6 +44,28 @@ export function ProfileModal({ userId, onClose, onStartChat, currentUserId, onPr
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"info" | "media">("info");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [allDepartments, setAllDepartments] = useState<Array<{ id: string; slug: string; nameEn: string; nameAm: string }>>([]);
+  const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (profile) {
+      setSelectedDeptIds(profile.departments?.map(d => d.id) || []);
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    if (isEditing && allDepartments.length === 0) {
+      (async () => {
+        try {
+          const res = await fetch("/api/chat/departments");
+          if (res.ok) {
+            const data = await res.json();
+            setAllDepartments(data);
+          }
+        } catch {}
+      })();
+    }
+  }, [isEditing, allDepartments.length]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,49 +112,80 @@ export function ProfileModal({ userId, onClose, onStartChat, currentUserId, onPr
   }, [userId]);
 
   const handleSave = async () => {
-    if (!editName.trim()) return;
     setSaving(true);
     try {
-      let avatarUrl = profile?.avatarUrl;
-      if (avatarFile) {
-        const fd = new FormData();
-        fd.append("file", avatarFile);
-        const uploadRes = await fetch("/api/chat/upload", { method: "POST", body: fd });
-        if (uploadRes.ok) {
-          const data = await uploadRes.json();
-          avatarUrl = data.fileUrl;
+      let success = true;
+
+      if (isOwnProfile) {
+        if (!editName.trim()) {
+          setSaving(false);
+          return;
+        }
+        let avatarUrl = profile?.avatarUrl;
+        if (avatarFile) {
+          const fd = new FormData();
+          fd.append("file", avatarFile);
+          const uploadRes = await fetch("/api/chat/upload", { method: "POST", body: fd });
+          if (uploadRes.ok) {
+            const data = await uploadRes.json();
+            avatarUrl = data.fileUrl;
+          }
+        }
+
+        const res = await fetch("/api/chat/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fullName: editName.trim(),
+            username: editUsername.trim() || undefined,
+            phoneNumber: editPhone.trim() || null,
+            avatarUrl,
+          }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          const newAvatarUrl = updated.avatarUrl ?? avatarUrl;
+          const newFullName = updated.fullName || editName.trim();
+          setProfile(prev => prev ? {
+            ...prev,
+            fullName: newFullName,
+            avatarUrl: newAvatarUrl,
+            username: updated.username || editUsername.trim(),
+            phoneNumber: (updated.phoneNumber ?? editPhone.trim()) || null,
+          } : prev);
+          onProfileUpdated?.(newAvatarUrl, newFullName);
+        } else {
+          success = false;
+          alert("Failed to update profile details");
         }
       }
 
-      const res = await fetch("/api/chat/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: editName.trim(),
-          username: editUsername.trim() || undefined,
-          phoneNumber: editPhone.trim() || null,
-          avatarUrl,
-        }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        const newAvatarUrl = updated.avatarUrl ?? avatarUrl;
-        const newFullName = updated.fullName || editName.trim();
-        setProfile(prev => prev ? {
-          ...prev,
-          fullName: newFullName,
-          avatarUrl: newAvatarUrl,
-          username: updated.username || editUsername.trim(),
-          phoneNumber: (updated.phoneNumber ?? editPhone.trim()) || null,
-        } : prev);
+      if (profile?.canEditDepartments && success) {
+        const res = await fetch(`/api/chat/users/${userId}/departments`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ departmentIds: selectedDeptIds }),
+        });
+        if (res.ok) {
+          const profileRes = await fetch(`/api/chat/profile/${userId}`);
+          if (profileRes.ok) {
+            const updatedProfile = await profileRes.json();
+            setProfile(updatedProfile);
+          }
+        } else {
+          success = false;
+          alert("Failed to update departments");
+        }
+      }
+
+      if (success) {
         setIsEditing(false);
         setAvatarFile(null);
         setAvatarPreview(null);
-        onProfileUpdated?.(newAvatarUrl, newFullName);
-      } else {
-        alert("Failed to update profile");
       }
-    } catch { alert("Failed to update profile"); }
+    } catch {
+      alert("An error occurred while saving profile");
+    }
     setSaving(false);
   };
 
@@ -146,6 +201,7 @@ export function ProfileModal({ userId, onClose, onStartChat, currentUserId, onPr
       setEditName(profile.fullName || "");
       setEditUsername(profile.username || "");
       setEditPhone(profile.phoneNumber || "");
+      setSelectedDeptIds(profile.departments?.map(d => d.id) || []);
     }
     setAvatarPreview(null);
     setAvatarFile(null);
@@ -181,12 +237,12 @@ export function ProfileModal({ userId, onClose, onStartChat, currentUserId, onPr
             <h2 className="text-lg font-bold text-[var(--text-main)] flex-1">
               {isOwnProfile ? "My Profile" : "User Info"}
             </h2>
-            {isOwnProfile && !isEditing && (
+            {(isOwnProfile || profile?.canEditDepartments) && !isEditing && (
               <button onClick={() => setIsEditing(true)} className="text-sm text-[var(--primary-green)] font-semibold hover:underline flex items-center gap-1">
                 <i className="fa-solid fa-pen-to-square"></i> Edit
               </button>
             )}
-            {isOwnProfile && isEditing && (
+            {(isOwnProfile || profile?.canEditDepartments) && isEditing && (
               <div className="flex gap-2">
                 <button onClick={cancelEdit} className="text-sm text-[var(--text-muted)] font-semibold hover:text-[var(--text-main)]">Cancel</button>
                 <button onClick={handleSave} disabled={saving}
@@ -323,6 +379,52 @@ export function ProfileModal({ userId, onClose, onStartChat, currentUserId, onPr
                       <div className="flex-1">
                         <p className="text-[var(--text-main)] font-medium text-sm">{profile.groupsCount} group{profile.groupsCount !== 1 ? "s" : ""}</p>
                         <p className="text-xs text-[var(--text-muted)]">Groups in Common</p>
+                      </div>
+                    </div>
+
+                    {/* Departments */}
+                    <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)]">
+                      <div className="flex items-center gap-3">
+                        <i className="fa-solid fa-sitemap text-[var(--text-muted)] w-5 text-center"></i>
+                        <span className="text-xs text-[var(--text-muted)]">Departments</span>
+                      </div>
+                      <div className="mt-1 pl-8">
+                        {isEditing && profile.canEditDepartments ? (
+                          <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
+                            {allDepartments.map((dept) => {
+                              const checked = selectedDeptIds.includes(dept.id);
+                              return (
+                                <label key={dept.id} className="flex items-center gap-2 text-sm text-[var(--text-main)] cursor-pointer hover:text-[var(--primary-green)] transition">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedDeptIds((prev) => [...prev, dept.id]);
+                                      } else {
+                                        setSelectedDeptIds((prev) => prev.filter((id) => id !== dept.id));
+                                      }
+                                    }}
+                                    className="rounded border-[var(--border-color)] text-[var(--primary-green)] focus:ring-[var(--primary-green)] w-4 h-4 cursor-pointer"
+                                  />
+                                  <span>{dept.nameEn}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {profile.departments && profile.departments.length > 0 ? (
+                              profile.departments.map((dept) => (
+                                <span key={dept.id} className="px-2 py-1 rounded bg-[var(--primary-light)] text-[var(--primary-green)] text-xs font-semibold">
+                                  {dept.nameEn}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-sm text-[var(--text-muted)] italic">No department assigned</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 

@@ -38,7 +38,11 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     const url = process.env.DATABASE_URL ?? "postgres://moa:moa@localhost:5433/moa_portal";
-    this.pool = new pg.Pool({ connectionString: url });
+    const isNeon = url.includes("neon.tech");
+    this.pool = new pg.Pool({
+      connectionString: url,
+      ssl: isNeon ? { rejectUnauthorized: false } : undefined,
+    });
     this.db = drizzle(this.pool, { schema: this.schemaObj });
   }
 
@@ -1085,7 +1089,43 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       .from(chatRoomMembers)
       .innerJoin(chatRooms, eq(chatRoomMembers.roomId, chatRooms.id))
       .where(and(eq(chatRoomMembers.userId, userId), eq(chatRooms.type, "group"), isNull(chatRooms.deletedAt)));
-    return { ...user, sharedMedia, groupsCount: groupsCount[0]?.count ?? 0 };
+    const userDepts = await this.db
+      .select({
+        id: departments.id,
+        slug: departments.slug,
+        nameEn: departments.nameEn,
+        nameAm: departments.nameAm,
+      })
+      .from(userDepartments)
+      .innerJoin(departments, eq(userDepartments.departmentId, departments.id))
+      .where(eq(userDepartments.userId, userId));
+    return { ...user, sharedMedia, groupsCount: groupsCount[0]?.count ?? 0, departments: userDepts };
+  }
+
+  async canEditUserDepartments(requesterId: string, targetUserId: string): Promise<boolean> {
+    const [requester] = await this.db.select({ role: users.role }).from(users).where(eq(users.id, requesterId)).limit(1);
+    if (!requester) return false;
+    if (requester.role === "admin") return true;
+
+    if (requester.role === "supervisor") {
+      const supervisorDepts = await this.db
+        .select({ departmentId: userDepartments.departmentId })
+        .from(userDepartments)
+        .where(eq(userDepartments.userId, requesterId));
+      if (supervisorDepts.length === 0) return false;
+
+      const targetDepts = await this.db
+        .select({ departmentId: userDepartments.departmentId })
+        .from(userDepartments)
+        .where(eq(userDepartments.userId, targetUserId));
+
+      const supervisorDeptIds = supervisorDepts.map(sd => sd.departmentId);
+      const targetDeptIds = targetDepts.map(td => td.departmentId);
+
+      return supervisorDeptIds.some(id => targetDeptIds.includes(id));
+    }
+
+    return false;
   }
 
   // ── Profile Update ──
